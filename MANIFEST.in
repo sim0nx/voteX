@@ -1,0 +1,3 @@
+include votex/config/deployment.ini_tmpl
+recursive-include votex/public *
+recursive-include votex/templates *

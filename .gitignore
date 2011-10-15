@@ -1,0 +1,4 @@
+*.pyc
+development.ini
+data/
+*.swp
