@@ -31,9 +31,11 @@
 		<div id="header" class="span-24">
 			
 			<!-- logo !-->
+			<!--
 			<div id="logo" class="span-8">
 				<img src="/images/logo.png" width="" height="" alt="mematool logo" />
 			</div>
+			!-->
 			<!-- logo end !-->
 			
 			<!-- top-navigation !-->
@@ -132,7 +134,10 @@
       % endif
     <div id="flash" class="${flash_class}"><p>${session.get('flash')}</p></div>
     <%
-        del session['flash']
+	if 'flash' in session:
+	        del session['flash']
+	if 'flash_class' in session:
+	        del session['flash_class']
         session.save()
     %>
     % endif
@@ -162,8 +167,3 @@
 ${self.flash()}
 ${self.error_messages()}
 </%def>
-
-
-<% 
-	# We should be able to dynmically get all available controllers and list them (where?) 
-%>
