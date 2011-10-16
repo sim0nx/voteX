@@ -6,9 +6,9 @@
 				
 <article>
 	<h3>VoteX</h3>
-	${h.form(url(controller='vote', action='vote'), method='post', name='authform')}
+	${h.form(url(controller='vote', action='vote'), method='post')}
      	<div><input type="text" class="text" name="vote_key" tabindex=1 required /></div> 
-	<div><input type="submit" class="text" name="submit" tabindex=2 value="${_('Login')}" /></div>
+	<div><input type="submit" class="text" name="submit" tabindex=2 value="${_('Go')}" /></div>
 	</form> 
 	 <div class="clear">&nbsp;</div>
 </article>

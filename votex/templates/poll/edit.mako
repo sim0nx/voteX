@@ -6,39 +6,39 @@ def getFormVar(s, c, var):
 		if var in s['reqparams']:
 			return s['reqparams'][var]
 
-	if hasattr(c, 'system'):
-		if var in vars(c.system):
-			return vars(c.system)[var]
+	if hasattr(c, 'poll'):
+		if var in vars(c.poll):
+			return vars(c.poll)[var]
 
 	return ''
 %>
 
 <%
-system_type_yesno = ''
-system_type_yesnonull = ''
-system_type_complex = ''
+poll_type_yesno = ''
+poll_type_yesnonull = ''
+poll_type_complex = ''
 
 public_yes = ''
 public_no = ''
 
 if c.mode == 'edit':
-	if c.system.type == 'yesno':
-		system_type_yesno = 'checked'
-	elif c.system.type == 'yesnonull':
-		system_type_yesnonull = 'checked'
-	elif c.system.type == 'complex':
-		system_type_complex = 'checked'
+	if c.poll.type == 'yesno':
+		poll_type_yesno = 'checked'
+	elif c.poll.type == 'yesnonull':
+		poll_type_yesnonull = 'checked'
+	elif c.poll.type == 'complex':
+		poll_type_complex = 'checked'
 
-	if c.system.public:
+	if c.poll.public:
 		public_yes = 'checked'
 	else:
 		public_no = 'checked'
 %>
 
-<form method="post" action="${url(controller='system', action='doEditSystem')}" name="recordform">
+<form method="post" action="${url(controller='poll', action='doEditPoll')}" name="recordform">
 
 <div id="content" class="span-18 push-1 last ">
-<header style="background:#00ADEF; padding:5px; font-weight:bold; color:#fff;">${_('Add system')}</header>
+<header style="background:#00ADEF; padding:5px; font-weight:bold; color:#fff;">${_('Add poll')}</header>
 <article>
 <table class="table_content">
 	${parent.all_messages()}
@@ -50,7 +50,7 @@ if c.mode == 'edit':
 			% if c.mode is 'add':
 			<input type="text" name="name" value="${getFormVar(session, c, 'name')}" class="input text">
 			% else:
-			${c.system.name}
+			${c.poll.name}
 			% endif
 		</td>
 	</tr>
@@ -91,9 +91,9 @@ if c.mode == 'edit':
                         ${_('Type')}
                 </td>
                 <td>
-			<input type="radio" name="type" value="yesno" ${system_type_yesno}>Yes/No<br/>
-       			<input type="radio" name="type" value="yesnonull" ${system_type_yesnonull}>Yes/No/Null<br/>
-			<input type="radio" name="type" value="complex" ${system_type_complex}>Complex<br/>
+			<input type="radio" name="type" value="yesno" ${poll_type_yesno}>Yes/No<br/>
+       			<input type="radio" name="type" value="yesnonull" ${poll_type_yesnonull}>Yes/No/Null<br/>
+			<input type="radio" name="type" value="complex" ${poll_type_complex}>Complex<br/>
                 </td>
         </tr>
         <tr>
@@ -109,7 +109,7 @@ if c.mode == 'edit':
 
 <input type="hidden" name="mode" value="${c.mode}">
 % if c.mode is 'edit':
-<input type="hidden" name="system_id" value="${c.system.id}">
+<input type="hidden" name="poll_id" value="${c.poll.id}">
 % endif
 <input type="submit" name="" value="${_('Submit')}" class="input button right"> 
 

@@ -26,7 +26,7 @@
 					</th>
 				</tr>
 <% i = 0 %>
-% for s in c.systems:
+% for s in c.polls:
 	<%
 		public = h.literal('<img src="/images/icons/notok.png">') if not s.public  else h.literal('<img src="/images/icons/ok.png">')
 		i += 1
@@ -37,8 +37,8 @@
 	        <td>${s.expiration_date}</td>
 	        <td>${s.type}</td>
 		<td>${public}</td>
-		<td><a href="${url(controller='system', action='editSystem', system_id=s.id)}"><img src="/images/icons/pencil.png"></a></td>
-		<td><a href="${url(controller='system', action='deleteSystem', system_id=s.id)}"><img src="/images/icons/notok.png"></a></td>
+		<td><a href="${url(controller='poll', action='editPoll', poll_id=s.id)}"><img src="/images/icons/pencil.png"></a></td>
+		<td><a href="${url(controller='poll', action='deletePoll', poll_id=s.id)}"><img src="/images/icons/notok.png"></a></td>
         </tr>
 % endfor
 

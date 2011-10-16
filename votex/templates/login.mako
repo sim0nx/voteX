@@ -6,7 +6,7 @@
 				
 <article>
 	<h3>VoteX Login</h3>
-	${h.form(url(controller='system', action='doLogin'), method='post', name='authform')}
+	${h.form(url(controller='poll', action='doLogin'), method='post', name='authform')}
      	<div><input type="text" class="text" name="username" tabindex=1 placeholder="${_('syn2cat username')}" required /></div> 
 	<div><input type="password" class="text" name="password" tabindex=2 placeholder="${_('password')}" required /></div> 
 	<div><input type="submit" class="text" name="submit" tabindex=3 value="${_('Login')}" /></div>

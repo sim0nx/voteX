@@ -6,9 +6,9 @@ def getFormVar(s, c, var):
 		if var in s['reqparams']:
 			return s['reqparams'][var]
 
-	if hasattr(c, 'system'):
-		if var in vars(c.system):
-			return vars(c.system)[var]
+	if hasattr(c, 'poll'):
+		if var in vars(c.poll):
+			return vars(c.poll)[var]
 
 	return ''
 %>
@@ -26,7 +26,7 @@ def getFormVar(s, c, var):
                         ${_('Name')}
                 </td>
 		<td>
-			${c.system.name}
+			${c.poll.name}
 		</td>
 	</tr>
 	<tr>
@@ -34,14 +34,14 @@ def getFormVar(s, c, var):
                         ${_('Instructions')}
                 </td>
 		<td>
-			${c.system.instructions}
+			${c.poll.instructions}
 		</td>
        	</tr>
 	<tr>
                 <td class="table_title">
                         ${_('Vote')}
                 </td>
-		% if c.system.type == 'complex':
+		% if c.poll.type == 'complex':
 		<td>
 			<textarea rows='10' cols='60' name="vote">${getFormVar(session, c, 'vote')}</textarea>
 		</td>
@@ -49,7 +49,7 @@ def getFormVar(s, c, var):
 		<td>
 			<input type="radio" name="vote" value="yes">Yes<br/>
 			<input type="radio" name="vote" value="no">No<br/>
-			% if c.system.type == 'yesnonull':
+			% if c.poll.type == 'yesnonull':
 			<input type="radio" name="vote" value="null">Null<br/>
 			% endif
 		</td>

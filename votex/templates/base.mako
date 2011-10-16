@@ -39,12 +39,12 @@
 			<!-- top-navigation !-->
 			<nav id="top" class="span-16 push-2 last">
 				<ul class="list-horizontal">
-					<li>${h.link_to(_('Add system'),url(controller='system', action='addSystem'))}</li>
-					<li>${h.link_to(_('System'),url(controller='system', action='login'))}</li>
+					<li>${h.link_to(_('Add poll'),url(controller='poll', action='addPoll'))}</li>
+					<li>${h.link_to(_('Poll'),url(controller='poll', action='login'))}</li>
 					<li>${h.link_to(_('Vote'),url(controller='vote', action='index'))}</li>
 					<li>${h.link_to(_('Results'),url(controller='vote', action='results'))}</li>
 					% if session.has_key('uid'):
-					<li>${h.link_to(_('Logout'),url(controller='system', action='logout',id=None))}</li>
+					<li>${h.link_to(_('Logout'),url(controller='poll', action='logout',id=None))}</li>
 					% endif
 				</ul>
 			</nav>
