@@ -32,13 +32,16 @@ class PollController(BaseController):
 		super(PollController, self).__init__()
 		self.uid = session.get('uid')
 
+		if self.uid:
+			c.actions = list()
+			c.actions.append( (_('Show all polls'), 'poll', 'showAll') )
+			c.actions.append( (_('Add poll'), 'poll', 'addPoll') )
 
 	def login(self):
 		if not self.uid is None:
 			redirect(url(controller='poll', action='showAll'))
 
 		return render('/login.mako')
-
 
 	def doLogin(self):
 		if not 'username' in request.params or request.params['username'] == '' or not 'password' in request.params or request.params['password'] == '':
@@ -97,7 +100,7 @@ class PollController(BaseController):
 			for s in polls:
 				c.polls.append(s)
 		except NoResultFound:
-			print 'No such sql user !'
+			print 'No such poll'
 
 		return render('/poll/showAll.mako')
 
@@ -120,6 +123,7 @@ class PollController(BaseController):
 
 			if len(poll.votes) > 0:
 				session['flash'] = _('Cannot edit a running poll')
+				session['flash_class'] = 'error'
 				session.save()
 				redirect(url(controller='poll', action='showAll'))
 
@@ -209,8 +213,11 @@ class PollController(BaseController):
 			poll.instructions = request.params['instructions']
 			poll.expiration_date = request.params['expiration_date']
 			poll.type = request.params['type']
-			poll.public = request.params['public']
 
+			if request.params['public'] == 'yes':
+				poll.public = True
+			else:
+				poll.public = False
 			
 			if request.params['mode'] == 'add':
 				Session.add(poll)
@@ -222,7 +229,7 @@ class PollController(BaseController):
 				vo = None
 				vo = Vote()
 				vo.poll_id = poll.id
-				vo.key = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(10))
+				vo.key = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(20))
 				mailtext = '''\
 				Hey,
 
@@ -256,6 +263,7 @@ class PollController(BaseController):
 		except LookupError:
 			print 'No such user !'
 			session['flash'] = _('Failed to add poll')
+			session['flash_class'] = 'error'
 			session.save()
 
 		redirect(url(controller='poll', action='showAll'))
@@ -291,7 +299,27 @@ class PollController(BaseController):
 			return render('/vote/showResults.mako')
 		except Exception as e:
 			print e
-			raise e
 			pass
+
+		redirect(url(controller='poll', action='showAll'))
+
+	@needLogin
+	def deletePoll(self):
+		if (not 'poll_id' in request.params):
+			redirect(url(controller='poll', action='showAll'))
+
+		try:
+			poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+			Session.query(Vote).filter(Vote.poll_id == poll.id).delete()
+
+			Session.delete(poll)
+			Session.commit()
+			session['flash'] = _('Poll successfully deleted')
+			session.save()
+		except Exception as e:
+			print e
+			session['flash'] = _('Failed to delete poll')
+			session['flash_class'] = 'error'
+			session.save()
 
 		redirect(url(controller='poll', action='showAll'))

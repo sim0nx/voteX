@@ -6,6 +6,7 @@
 				
 <article>
 	<h3>VoteX</h3>
+	${parent.flash()}
 	${h.form(url(controller='vote', action='vote'), method='post')}
      	<div><input type="text" class="text" name="vote_key" tabindex=1 required /></div> 
 	<div><input type="submit" class="text" name="submit" tabindex=2 value="${_('Go')}" /></div>
@@ -13,7 +14,8 @@
 	 <div class="clear">&nbsp;</div>
 </article>
 
-
-<script language="JavaScript">
-	document.forms[0].username.focus()
-</script>
+<%
+if 'reqparams' in session:
+	del session['reqparams']
+	session.save()
+%>

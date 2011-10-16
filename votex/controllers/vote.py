@@ -40,6 +40,13 @@ class VoteController(BaseController):
 		if 'vote_key' in request.params and not request.params['vote_key'] == '':
 			try:
 				vote = Session.query(Vote).filter(Vote.key == request.params['vote_key']).one()
+				poll = Session.query(Poll).filter(Poll.id == vote.poll_id).one()
+
+				if datetime.now() > poll.expiration_date:
+					session['flash'] = _('Sorry, poll has expired')
+					session['flash_class'] = 'error'
+					session.save()
+					redirect(url(controller='vote', action='vote'))
 
 				if vote.update_date is None:
 					c.poll = Session.query(Poll).filter(Poll.id == vote.poll_id).one()
@@ -61,6 +68,15 @@ class VoteController(BaseController):
 				vote = Session.query(Vote).filter(Vote.key == request.params['vote_key']).one()
 				poll = Session.query(Poll).filter(Poll.id == vote.poll_id).one()
 
+				if not vote.update_date is None:
+					redirect(url(controller='vote', action='vote'))
+
+				if datetime.now() > poll.expiration_date:
+					session['flash'] = _('Sorry, poll has expired')
+					session['flash_class'] = 'error'
+					session.save()
+					redirect(url(controller='vote', action='vote'))
+
 				if poll.type == 'yesno' and (request.params['vote'] == 'yes' or request.params['vote'] == 'no'):
 					vote.simple_vote = request.params['vote']
 				elif poll.type == 'yesnonull' and (request.params['vote'] == 'yes' or request.params['vote'] == 'no' or request.params['vote'] == 'null'):
@@ -71,12 +87,15 @@ class VoteController(BaseController):
 					redirect(url(controller='vote', action='vote'))
 
 				vote.update_date = datetime.now()
-
 				Session.commit()
 
-				print 'vote OK'
-				redirect(url(controller='vote', action='vote'))
-			except:
+				session['flash'] = _('Vote successfully saved')
+				session.save()
+			except Exception as e:
+				print e
+				session['flash'] = _('Failed to save vote')
+				session['flash_class'] = 'error'
+				session.save()
 				pass
 
 		redirect(url(controller='vote', action='vote'))

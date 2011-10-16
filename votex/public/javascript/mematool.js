@@ -31,5 +31,5 @@ $(document).ready(function(){
 	// login_success
 	// logout
 	// login_fail
-	$('div#profile_save, div#login_success, div#logout, div#login_fail, div#flash,').fadeOut(4000);
+	$('div#profile_save, div#login_success, div#logout, div#login_fail, div#flash,').fadeOut(6000);
 });
