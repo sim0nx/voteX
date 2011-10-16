@@ -39,7 +39,8 @@
 		<td>${public}</td>
 		<td><a href="${url(controller='poll', action='editPoll', poll_id=s.id)}"><img src="/images/icons/pencil.png"></a></td>
 		<td><a href="${url(controller='poll', action='deletePoll', poll_id=s.id)}"><img src="/images/icons/notok.png"></a></td>
-        </tr>
+       		<td><a href="${url(controller='poll', action='showResults', poll_id=s.id)}"><img src="/images/icons/pencil.png" alt="${_('Show results')}"></a></td>
+	</tr>
 % endfor
 
 </table>

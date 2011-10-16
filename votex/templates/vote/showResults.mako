@@ -18,7 +18,9 @@
                         ${_('Instructions')}
                 </td>
 		<td>
-			${c.poll.instructions}
+			% for l in c.poll.instructions.split('\n'):
+			${l}<br/>
+			% endfor
 		</td>
        	</tr>
         <tr>

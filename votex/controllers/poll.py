@@ -260,3 +260,38 @@ class PollController(BaseController):
 
 		redirect(url(controller='poll', action='showAll'))
 
+	@needLogin
+	def showResults(self):
+		if (not 'poll_id' in request.params):
+			redirect(url(controller='poll', action='showAll'))
+
+		try:
+			poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+			c.poll = poll
+			votes = {}
+			votes['missing'] = 0
+
+			if poll.type == 'yesno' or poll.type == 'yesnonull':
+				for v in poll.votes:
+					if v.simple_vote is None:
+						votes['missing'] += 1
+					elif not v.simple_vote in votes:
+						votes[v.simple_vote] = 1
+					else:
+						votes[v.simple_vote] += 1
+
+				c.votes = votes
+			else:
+				i = 0
+				for v in poll.votes:
+					votes[str(c)] = v.complex_vote
+
+					i += 1
+
+			return render('/vote/showResults.mako')
+		except Exception as e:
+			print e
+			raise e
+			pass
+
+		redirect(url(controller='poll', action='showAll'))
