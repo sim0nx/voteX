@@ -107,6 +107,13 @@ class VoteController(BaseController):
 			try:
 				vote = Session.query(Vote).filter(Vote.key == request.params['vote_key']).one()
 				poll = Session.query(Poll).filter(Poll.id == vote.poll_id).one()
+
+				if vote.update_date is None:
+					session['flash'] = _('Vote first')
+					session['flash_class'] = 'error'
+					session.save()
+					redirect(url(controller='vote', action='vote'))
+
 				c.poll = poll
 				votes = {}
 				votes['missing'] = 0
