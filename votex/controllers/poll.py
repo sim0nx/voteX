@@ -287,15 +287,15 @@ class PollController(BaseController):
 						votes[v.simple_vote] = 1
 					else:
 						votes[v.simple_vote] += 1
-
-				c.votes = votes
 			else:
-				i = 0
 				for v in poll.votes:
-					votes[str(c)] = v.complex_vote
+					if v.complex_vote is None:
+						votes['missing'] += 1
+					else:
+						votes[v.complex_vote] = 1
 
-					i += 1
-
+			c.votes = votes
+			
 			return render('/vote/showResults.mako')
 		except Exception as e:
 			print e
