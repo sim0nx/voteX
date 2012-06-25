@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 <%inherit file="/base.mako" />
 
 <%!
@@ -30,11 +31,13 @@ def getFormVar(s, c, var):
 		</td>
 	</tr>
 	<tr>
-                <td class="table_title">
-                        ${_('Instructions')}
-                </td>
+    <td class="table_title">
+      ${_('Instructions')}
+    </td>
 		<td>
-			${c.poll.instructions}
+      % for l in c.poll.instructions.split('\n'):
+			${l}<br/>
+			% endfor
 		</td>
        	</tr>
 	<tr>
