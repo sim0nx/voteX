@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# -*- coding: utf-8 -*-
-=======
 #
 # Copyright (c) 2012 Georges Toth <georges _at_ trypill _dot_ org>
 #
@@ -19,7 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with voteX.  If not, see <http://www.gnu.org/licenses/>.
 
->>>>>>> 69de11f6cd1700df2c7850f8e13ee954c3912a9a
+# -*- coding: utf-8 -*-
+
 
 import logging
 
