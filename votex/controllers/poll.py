@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with voteX.  If not, see <http://www.gnu.org/licenses/>.
 
+# -*- coding: utf-8 -*-"
+
 
 import logging
 
@@ -47,298 +49,303 @@ _ = gettext.gettext
 
 class PollController(BaseController):
 
-	def __init__(self):
-		super(PollController, self).__init__()
-		self.uid = session.get('uid')
+  def __init__(self):
+    super(PollController, self).__init__()
+    self.uid = session.get('uid')
 
-		if self.uid:
-			c.actions = list()
-			c.actions.append( (_('Show all polls'), 'poll', 'showAll') )
-			c.actions.append( (_('Add poll'), 'poll', 'addPoll') )
+    if self.uid:
+      c.actions = list()
+      c.actions.append( (_('Show all polls'), 'poll', 'showAll') )
+      c.actions.append( (_('Add poll'), 'poll', 'addPoll') )
 
-	def login(self):
-		if not self.uid is None:
-			redirect(url(controller='poll', action='showAll'))
+  def login(self):
+    if not self.uid is None:
+      redirect(url(controller='poll', action='showAll'))
 
-		return render('/login.mako')
+    return render('/login.mako')
 
-	def doLogin(self):
-		if not 'username' in request.params or request.params['username'] == '' or not 'password' in request.params or request.params['password'] == '':
-			print "crap"
-		else:
+  def doLogin(self):
+    if not 'username' in request.params or request.params['username'] == '' or not 'password' in request.params or request.params['password'] == '':
+      print "crap"
+    else:
 
-			ret = False
-			try:   
-				ldapcon = LdapConnector(uid=request.params['username'], password=request.params['password'])
-				ret = True
-				print 'auth ok'
-			except:
-				print 'auth exception'
-				pass
+      ret = False
+      try:   
+        ldapcon = LdapConnector(uid=request.params['username'], password=request.params['password'])
+        ret = True
+        print 'auth ok'
+      except:
+        print 'auth exception'
+        pass
 
-			if ret:
-				self._clearSession()
+      if ret:
+        self._clearSession()
 
-				session['uid'] = request.params['username']
-				session.save()
+        session['uid'] = request.params['username']
+        session.save()
 
-				redirect(url(controller='poll', action='showAll'))
+        redirect(url(controller='poll', action='showAll'))
 
-		redirect(url(controller='poll', action='login'))
+    redirect(url(controller='poll', action='login'))
 
-	def _clearSession(self):
-		if not self.uid is None:
-			session['uid'] = None
-			del(session['uid'])
-			session.invalidate()
-			session.save()
-			session.delete()
+  def _clearSession(self):
+    if not self.uid is None:
+      session['uid'] = None
+      del(session['uid'])
+      session.invalidate()
+      session.save()
+      session.delete()
 
-	def logout(self):
-		self._clearSession()
+  def logout(self):
+    self._clearSession()
 
-		redirect(url(controller='poll', action='login'))
+    redirect(url(controller='poll', action='login'))
 
-	def needLogin(f):
-		def new_f(self):
-			if not self.uid is None:
-				return f(self)
-			else:
-				redirect(url(controller='poll', action='login'))
+  def needLogin(f):
+    def new_f(self):
+      if not self.uid is None:
+        return f(self)
+      else:
+        redirect(url(controller='poll', action='login'))
 
-                return new_f
+    return new_f
 
-	@needLogin
-	def showAll(self):
-		c.heading = _('All polls')
-		c.polls = []
+  @needLogin
+  def showAll(self):
+    c.heading = _('All polls')
+    c.polls = []
 
-		try:
-			polls = Session.query(Poll).filter(Poll.owner == self.uid).all()
+    try:
+      polls = Session.query(Poll).filter(Poll.owner == self.uid).all()
 
-			for s in polls:
-				c.polls.append(s)
-		except NoResultFound:
-			print 'No such poll'
+      for s in polls:
+        try:
+          s.name = s.name.encode('ascii','ignore')
+        except:
+          s.name ='poo...frickin P000000'
 
-		return render('/poll/showAll.mako')
+        c.polls.append(s)
+    except NoResultFound:
+      print 'No such poll'
 
-	@needLogin
-	def addPoll(self):
-		c.mode = 'add'
+    return render('/poll/showAll.mako')
 
-		return render('/poll/edit.mako')
+  @needLogin
+  def addPoll(self):
+    c.mode = 'add'
 
-	@needLogin
-	def editPoll(self):
-		if (not 'poll_id' in request.params):
-			redirect(url(controller='poll', action='showAll'))
+    return render('/poll/edit.mako')
 
-		try:
-			poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+  @needLogin
+  def editPoll(self):
+    if (not 'poll_id' in request.params):
+      redirect(url(controller='poll', action='showAll'))
 
-			c.heading = _('Edit poll')
-			c.mode = 'edit'
+    try:
+      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
 
-			if len(poll.votes) > 0:
-				session['flash'] = _('Cannot edit a running poll')
-				session['flash_class'] = 'error'
-				session.save()
-				redirect(url(controller='poll', action='showAll'))
+      c.heading = _('Edit poll')
+      c.mode = 'edit'
 
-			c.poll = poll
+      if len(poll.votes) > 0:
+        session['flash'] = _('Cannot edit a running poll')
+        session['flash_class'] = 'error'
+        session.save()
+        redirect(url(controller='poll', action='showAll'))
 
-			return render('/poll/edit.mako')
-		except:
-			pass
+      c.poll = poll
 
-		redirect(url(controller='poll', action='showAll'))
+      return render('/poll/edit.mako')
+    except:
+      pass
 
-	def _checkPoll(f):
-		def new_f(self):
-			# @TODO request.params may contain multiple values per key... test & fix
-			formok = True
-			errors = []
+    redirect(url(controller='poll', action='showAll'))
 
-			if not 'mode' in request.params or (request.params['mode'] != 'add' and request.params['mode'] != 'edit'):
-				formok = False
-				errors.append(_('Invalid form data'))
+  def _checkPoll(f):
+    def new_f(self):
+      # @TODO request.params may contain multiple values per key... test & fix
+      formok = True
+      errors = []
 
-			if request.params['mode'] == 'edit' and (not 'poll_id' in request.params or request.params['poll_id'] == '' or not re.match(r'^\d+$', request.params['poll_id'])):
-				formok = False
-				errors.append(_('Invalid form data'))
+      if not 'mode' in request.params or (request.params['mode'] != 'add' and request.params['mode'] != 'edit'):
+        formok = False
+        errors.append(_('Invalid form data'))
 
-			if not 'name' in request.params or request.params['name'] == '' or len(request.params['name']) > 255:
-				formok = False
-				errors.append(_('Invalid name'))
+      if request.params['mode'] == 'edit' and (not 'poll_id' in request.params or request.params['poll_id'] == '' or not re.match(r'^\d+$', request.params['poll_id'])):
+        formok = False
+        errors.append(_('Invalid form data'))
 
-			if not 'instructions' in request.params or request.params['instructions'] == '' or len(request.params['instructions']) > 1000:
-				formok = False
-				errors.append(_('Invalid instructions'))
+      if not 'name' in request.params or request.params['name'] == '' or len(request.params['name']) > 255:
+        formok = False
+        errors.append(_('Invalid name'))
 
-			if not 'voters' in request.params or request.params['voters'] == '':
-				formok = False
-				errors.append(_('Invalid voters'))
-			else:
-				voters = request.params['voters'].split('\n')
-				for v in voters:
-					if not re.match(r'\b[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}\b', v, re.I):
-						formok = False
-						errors.append(_('Invalid voters'))
-						break
+      if not 'instructions' in request.params or request.params['instructions'] == '' or len(request.params['instructions']) > 1000:
+        formok = False
+        errors.append(_('Invalid instructions'))
 
-			if not 'expiration_date' in request.params or not re.match(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}', request.params['expiration_date']):
-				formok = False
-				errors.append(_('Invalid expiration date'))
+      if not 'voters' in request.params or request.params['voters'] == '':
+        formok = False
+        errors.append(_('Invalid voters'))
+      else:
+        voters = request.params['voters'].split('\n')
+        for v in voters:
+          if not re.match(r'\b[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}\b', v, re.I):
+            formok = False
+            errors.append(_('Invalid voters'))
+            break
 
-			if not 'type' in request.params or (request.params['type'] != 'yesno' and request.params['type'] != 'yesnonull' and request.params['type'] != 'complex'):
-				formok = False
-				errors.append(_('Invalid type'))
+      if not 'expiration_date' in request.params or not re.match(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}', request.params['expiration_date']):
+        formok = False
+        errors.append(_('Invalid expiration date'))
 
-			if not 'public' in request.params or (request.params['public'] != 'yes' and request.params['public'] != 'no'):
-				formok = False
-				errors.append(_('Invalid public'))
+      if not 'type' in request.params or (request.params['type'] != 'yesno' and request.params['type'] != 'yesnonull' and request.params['type'] != 'complex'):
+        formok = False
+        errors.append(_('Invalid type'))
 
-			if not formok:
-				session['errors'] = errors
-				session['reqparams'] = {}
+      if not 'public' in request.params or (request.params['public'] != 'yes' and request.params['public'] != 'no'):
+        formok = False
+        errors.append(_('Invalid public'))
 
-				# @TODO request.params may contain multiple values per key... test & fix
-				for k in request.params.iterkeys():
-					session['reqparams'][k] = request.params[k]
-					
-				session.save()
+      if not formok:
+        session['errors'] = errors
+        session['reqparams'] = {}
 
-				if request.params['mode'] == 'add':
-					redirect(url(controller='poll', action='addPoll'))
-				else:
-					redirect(url(controller='poll', action='editPoll'))
+        # @TODO request.params may contain multiple values per key... test & fix
+        for k in request.params.iterkeys():
+          session['reqparams'][k] = request.params[k]
+          
+        session.save()
 
-			return f(self)
-		return new_f
+        if request.params['mode'] == 'add':
+          redirect(url(controller='poll', action='addPoll'))
+        else:
+          redirect(url(controller='poll', action='editPoll'))
 
-	@needLogin
-	@_checkPoll
-	@restrict('POST')
-	def doEditPoll(self):
-		try:
-			if request.params['mode'] == 'edit':
-				poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
-			else:
-				poll = Poll()
+      return f(self)
+    return new_f
 
-			poll.owner = self.uid
-			poll.name = request.params['name']
-			poll.instructions = request.params['instructions']
-			poll.expiration_date = request.params['expiration_date']
-			poll.type = request.params['type']
+  @needLogin
+  @_checkPoll
+  @restrict('POST')
+  def doEditPoll(self):
+    try:
+      if request.params['mode'] == 'edit':
+        poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+      else:
+        poll = Poll()
 
-			if request.params['public'] == 'yes':
-				poll.public = True
-			else:
-				poll.public = False
-			
-			if request.params['mode'] == 'add':
-				Session.add(poll)
-				Session.flush()
+      poll.owner = self.uid
+      poll.name = request.params['name'].encode('utf8')
+      poll.instructions = str(request.params['instructions'].encode('utf-8'))
+      poll.expiration_date = request.params['expiration_date']
+      poll.type = request.params['type']
 
-			voters = request.params['voters'].split('\n')
-			voters = list(set(voters))
-			for v in voters:
-				vo = None
-				vo = Vote()
-				vo.poll_id = poll.id
-				vo.key = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(20))
-				mailtext = '''\
-				Hey,
+      if request.params['public'] == 'yes':
+        poll.public = True
+      else:
+        poll.public = False
+      
+      if request.params['mode'] == 'add':
+        Session.add(poll)
+        Session.flush()
 
-				Your vote is requested for "%s".
-				You can vote here:
-					https://votex.hackerspace.lu:8443/vote/vote?vote_key=%s
+      voters = request.params['voters'].split('\n')
+      voters = list(set(voters))
+      for v in voters:
+        vo = None
+        vo = Vote()
+        vo.poll_id = poll.id
+        vo.key = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(20))
+        mailtext = '''\
+        Hey,
 
-				Your voting key is: %s
+        Your vote is requested for "%s".
+        You can vote here:
+          https://votex.hackerspace.lu:8443/vote/vote?vote_key=%s
 
-				The poll expires on %s
-				''' %\
-				(poll.name, vo.key, vo.key, poll.expiration_date)
+        Your voting key is: %s
 
-				msg = MIMEText(mailtext, 'plain')
-				msg['Subject'] = 'syn2cat - We need you to vote'
-				msg['From'] = 'noreply@hackerspace.lu'
-				msg['To'] = v
-				s = smtplib.SMTP('localhost')
-				s.sendmail(msg['From'], v, msg.as_string())
-				s.quit()
+        The poll expires on %s
+        ''' %\
+        (poll.name, vo.key, vo.key, poll.expiration_date)
 
-				Session.add(vo)
+        msg = MIMEText(mailtext, 'plain')
+        msg['Subject'] = 'syn2cat - We need you to vote'
+        msg['From'] = 'noreply@hackerspace.lu'
+        msg['To'] = v
+        s = smtplib.SMTP('localhost')
+        s.sendmail(msg['From'], v, msg.as_string())
+        s.quit()
 
-			Session.commit()
+        Session.add(vo)
 
-			session['flash'] = _('Poll successfully edited')
-			session.save()
+      Session.commit()
 
-			redirect(url(controller='poll', action='showAll'))
+      session['flash'] = _('Poll successfully edited')
+      session.save()
 
-		except LookupError:
-			print 'No such user !'
-			session['flash'] = _('Failed to add poll')
-			session['flash_class'] = 'error'
-			session.save()
+      redirect(url(controller='poll', action='showAll'))
 
-		redirect(url(controller='poll', action='showAll'))
+    except LookupError:
+      print 'No such user !'
+      session['flash'] = _('Failed to add poll')
+      session['flash_class'] = 'error'
+      session.save()
 
-	@needLogin
-	def showResults(self):
-		if (not 'poll_id' in request.params):
-			redirect(url(controller='poll', action='showAll'))
+    redirect(url(controller='poll', action='showAll'))
 
-		try:
-			poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
-			c.poll = poll
-			votes = {}
-			votes['missing'] = 0
+  @needLogin
+  def showResults(self):
+    if (not 'poll_id' in request.params):
+      redirect(url(controller='poll', action='showAll'))
 
-			if poll.type == 'yesno' or poll.type == 'yesnonull':
-				for v in poll.votes:
-					if v.simple_vote is None:
-						votes['missing'] += 1
-					elif not v.simple_vote in votes:
-						votes[v.simple_vote] = 1
-					else:
-						votes[v.simple_vote] += 1
-			else:
-				for v in poll.votes:
-					if v.complex_vote is None:
-						votes['missing'] += 1
-					else:
-						votes[v.complex_vote] = 1
+    try:
+      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+      c.poll = poll
+      votes = {}
+      votes['missing'] = 0
 
-			c.votes = votes
-			
-			return render('/vote/showResults.mako')
-		except Exception as e:
-			print e
-			pass
+      if poll.type == 'yesno' or poll.type == 'yesnonull':
+        for v in poll.votes:
+          if v.simple_vote is None:
+            votes['missing'] += 1
+          elif not v.simple_vote in votes:
+            votes[v.simple_vote] = 1
+          else:
+            votes[v.simple_vote] += 1
+      else:
+        for v in poll.votes:
+          if v.complex_vote is None:
+            votes['missing'] += 1
+          else:
+            votes[v.complex_vote] = 1
 
-		redirect(url(controller='poll', action='showAll'))
+      c.votes = votes
+      
+      return render('/vote/showResults.mako')
+    except Exception as e:
+      print e
+      pass
 
-	@needLogin
-	def deletePoll(self):
-		if (not 'poll_id' in request.params):
-			redirect(url(controller='poll', action='showAll'))
+    redirect(url(controller='poll', action='showAll'))
 
-		try:
-			poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
-			Session.query(Vote).filter(Vote.poll_id == poll.id).delete()
+  @needLogin
+  def deletePoll(self):
+    if (not 'poll_id' in request.params):
+      redirect(url(controller='poll', action='showAll'))
 
-			Session.delete(poll)
-			Session.commit()
-			session['flash'] = _('Poll successfully deleted')
-			session.save()
-		except Exception as e:
-			print e
-			session['flash'] = _('Failed to delete poll')
-			session['flash_class'] = 'error'
-			session.save()
+    try:
+      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+      Session.query(Vote).filter(Vote.poll_id == poll.id).delete()
 
-		redirect(url(controller='poll', action='showAll'))
+      Session.delete(poll)
+      Session.commit()
+      session['flash'] = _('Poll successfully deleted')
+      session.save()
+    except Exception as e:
+      print e
+      session['flash'] = _('Failed to delete poll')
+      session['flash_class'] = 'error'
+      session.save()
+
+    redirect(url(controller='poll', action='showAll'))
