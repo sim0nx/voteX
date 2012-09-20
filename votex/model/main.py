@@ -23,34 +23,74 @@ from votex.model.meta import Base
 
 
 class Poll(Base):
-	__tablename__ = 'poll'
+  __tablename__ = 'poll'
 
-	id			= Column(Integer, primary_key=True)
-	name			= Column(String(255))
-	owner			= Column(String(64))
-	instructions		= Column(Text)
-	expiration_date		= Column(DateTime)
-	type			= Column(String(64))
-	public			= Column(Boolean)
+  id      = Column(Integer, primary_key=True)
+  name      = Column(String(255))
+  owner     = Column(String(64))
+  instructions    = Column(Text)
+  expiration_date   = Column(DateTime)
+  public      = Column(Boolean)
 
-	votes = relationship('Vote')
+  questions = relationship('Question')
+  participants = relationship('Participant')
+  submissions = relationship('Submission')
 
-	def __str__(self):
-		return "<Poll id=%s, name=%s, owner=%s, instructions=%s, expiration_date=%s, type=%s, public=%s>>" %\
-			(self.id, self.name, self.owner, self.instructions, self.expiration_date, self.type, self.public)
+  def __str__(self):
+    return "<Poll id=%s, name=%s, owner=%s, instructions=%s, expiration_date=%s, type=%s, public=%s>>" %\
+      (self.id, self.name, self.owner, self.instructions, self.expiration_date, self.type, self.public)
 
+class Question(Base):
+  __tablename__ = 'question'
 
-class Vote(Base):
-	__tablename__ = 'vote'
+  id      = Column(Integer, primary_key=True)
+  poll_id     = Column(Integer, ForeignKey('poll.id'), index=True)
+  question      = Column(String(255))
+  type      = Column(Integer)
+  mandatory     = Column(Integer)
 
-	id = Column(Integer, primary_key=True)
-	poll_id = Column(Integer, ForeignKey('poll.id'), index=True)
-	update_date = Column(DateTime)
-	key = Column(String(255))
-	simple_vote = Column(String(4))
-	complex_vote = Column(Text)
+  answers = relationship('Answer')
 
+  def __str__(self):
+    return "<Poll id=%s, name=%s, owner=%s, instructions=%s, expiration_date=%s, type=%s, public=%s>>" %\
+      (self.id, self.name, self.owner, self.instructions, self.expiration_date, self.type, self.public)
 
-	def __str(self):
-		return "<Vote id=%s, poll_id=%s, update_date=%s, key=%s, simple_vote=%s, complex_vote=%s>" %\
-			(self.id, self.poll_id, self.update_date, self.key, self.simple_vote, self.complex_vote)
+class Answer(Base):
+  __tablename__ = 'answer'
+
+  id = Column(Integer, primary_key=True)
+  question_id = Column(Integer, ForeignKey('question.id'), index=True)
+  name = Column(String(255))
+
+  def __str(self):
+    return "<Vote id=%s, poll_id=%s, update_date=%s, key=%s, simple_vote=%s, complex_vote=%s>" %\
+      (self.id, self.poll_id, self.update_date, self.key, self.simple_vote, self.complex_vote)
+
+class Participant(Base):
+  __tablename__ = 'participant'
+
+  id = Column(Integer, primary_key=True)
+  poll_id = Column(Integer, ForeignKey('poll.id'), index=True)
+  key = Column(String(64))
+  update_date = Column(DateTime)
+
+  submissions = relationship('Submission')
+
+  def __str(self):
+    return "<Vote id=%s, poll_id=%s, update_date=%s, key=%s, simple_vote=%s, complex_vote=%s>" %\
+      (self.id, self.poll_id, self.update_date, self.key, self.simple_vote, self.complex_vote)
+
+class Submission(Base):
+  __tablename__ = 'submission'
+
+  id = Column(Integer, primary_key=True)
+  poll_id = Column(Integer, ForeignKey('poll.id'), index=True)
+  participant_id = Column(Integer, ForeignKey('participant.id'), index=True)
+  answer_id = Column(Integer, ForeignKey('answer.id'), index=True)
+  update_date = Column(DateTime)
+  answer_text = Column(String(255))
+  answer_bool = Column(Integer)
+
+  def __str(self):
+    return "<Vote id=%s, poll_id=%s, update_date=%s, key=%s, simple_vote=%s, complex_vote=%s>" %\
+      (self.id, self.poll_id, self.update_date, self.key, self.simple_vote, self.complex_vote)

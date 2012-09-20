@@ -22,10 +22,10 @@ def getFormVar(s, c, var):
 <article>
 <table class="table_content">
 	${parent.all_messages()}
-        <tr>
-                <td class="table_title">
-                        ${_('Name')}
-                </td>
+  <tr>
+    <td class="table_title">
+      ${_('Name')}
+    </td>
 		<td>
 			${c.poll.name}
 		</td>
@@ -39,26 +39,26 @@ def getFormVar(s, c, var):
 			${l}<br/>
 			% endfor
 		</td>
-       	</tr>
-	<tr>
-                <td class="table_title">
-                        ${_('Vote')}
-                </td>
-		% if c.poll.type == 'complex':
-		<td>
-			<textarea rows='10' cols='60' name="vote">${getFormVar(session, c, 'vote')}</textarea>
-		</td>
-		% else:
-		<td>
-			<input type="radio" name="vote" value="yes">Yes<br/>
-			<input type="radio" name="vote" value="no">No<br/>
-			% if c.poll.type == 'yesnonull':
-			<input type="radio" name="vote" value="null">Null<br/>
-			% endif
-		</td>
-		% endif
-       	</tr>
+  </tr>
 </table>
+
+% for q in c.poll.questions:
+<table class="table_content">
+	<tr>
+    <td class="table_title">
+      ${q.question}
+    </td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr>
+  % for a in q.answers:
+		<td>
+			<input type="radio" name="question_${q.id}" value="${a.id}">${a.name}<br/>
+		</td>
+  % endfor
+  </tr>
+</table>
+% endfor
 
 <input type="hidden" name="vote_key" value="${c.vote_key}">
 <input type="submit" name="" value="${_('Submit')}" class="input button right"> 

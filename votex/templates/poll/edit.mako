@@ -14,21 +14,10 @@ def getFormVar(s, c, var):
 %>
 
 <%
-poll_type_yesno = ''
-poll_type_yesnonull = ''
-poll_type_complex = ''
-
 public_yes = ''
 public_no = ''
 
 if c.mode == 'edit':
-	if c.poll.type == 'yesno':
-		poll_type_yesno = 'checked'
-	elif c.poll.type == 'yesnonull':
-		poll_type_yesnonull = 'checked'
-	elif c.poll.type == 'complex':
-		poll_type_complex = 'checked'
-
 	if c.poll.public:
 		public_yes = 'checked'
 	else:
@@ -42,7 +31,7 @@ if c.mode == 'edit':
 <article>
 <table class="table_content">
 	${parent.all_messages()}
-        <tr>
+  <tr>
                 <td class="table_title">
                         ${_('Name')}
                 </td>
@@ -88,16 +77,6 @@ if c.mode == 'edit':
         </tr>
         <tr>
                 <td class="table_title">
-                        ${_('Type')}
-                </td>
-                <td>
-			<input type="radio" name="type" value="yesno" ${poll_type_yesno}>Yes/No<br/>
-       			<input type="radio" name="type" value="yesnonull" ${poll_type_yesnonull}>Yes/No/Null<br/>
-			<input type="radio" name="type" value="complex" ${poll_type_complex}>Complex<br/>
-                </td>
-        </tr>
-        <tr>
-                <td class="table_title">
                         ${_('Public')}
                 </td>
                 <td>
@@ -106,7 +85,6 @@ if c.mode == 'edit':
                 </td>
         </tr>
 </table>
-
 <input type="hidden" name="mode" value="${c.mode}">
 % if c.mode is 'edit':
 <input type="hidden" name="poll_id" value="${c.poll.id}">
@@ -114,6 +92,45 @@ if c.mode == 'edit':
 <input type="submit" name="" value="${_('Submit')}" class="input button right"> 
 
 </form>
+
+
+% if c.mode is 'edit':
+Questions:
+<a href="${url(controller='poll', action='addQuestion', poll_id=c.poll.id)}">Add question</a>
+
+ % for q in c.poll.questions:
+<table>
+  <tr>
+    <td>
+      ${_('Question')}
+      <a href="${url(controller='poll', action='editQuestion', poll_id=c.poll.id, question_id=q.id)}">Edit question</a>
+    </td>
+    <td>
+      ${q.question}
+    </td>
+  </tr>
+  <tr>
+    <td>
+      ${_('Type')}
+    </td>
+    <td>
+      ${q.type}
+    </td>
+  </tr>
+  % for a in q.answers:
+  <tr>
+    <td>
+      ${_('Name')}
+    </td>
+    <td>
+      ${a.name}
+    </td>
+  </tr>
+  % endfor
+</table>
+% endfor
+% endif
+
 </article>
 <div id="make-space" class="prepend-top">&nbsp;</div>
 </div>

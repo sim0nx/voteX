@@ -26,7 +26,7 @@ from pylons.controllers.util import redirect
 from pylons import config
 
 from votex.lib.base import BaseController, render, Session
-from votex.model.main import Poll, Vote
+from votex.model.main import Poll, Question, Answer, Participant, Submission
 
 log = logging.getLogger(__name__)
 
@@ -137,6 +137,48 @@ class PollController(BaseController):
     return render('/poll/edit.mako')
 
   @needLogin
+  def addQuestion(self):
+    if (not 'poll_id' in request.params):
+      redirect(url(controller='poll', action='showAll'))
+
+    try:
+      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+
+      c.heading = _('Add question')
+      c.mode = 'add'
+      c.poll = poll
+
+      return render('/poll/editQuestion.mako')
+    except:
+      import sys, traceback
+      traceback.print_exc(file=sys.stdout)
+      pass
+
+    redirect(url(controller='poll', action='showAll'))
+
+  @needLogin
+  def addAnswer(self):
+    if (not 'question_id' in request.params):
+      redirect(url(controller='poll', action='showAll'))
+
+    try:
+      question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
+      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
+
+      c.heading = _('Add answer')
+      c.mode = 'add'
+      c.poll = poll
+      c.question = question
+
+      return render('/poll/editAnswer.mako')
+    except:
+      import sys, traceback
+      traceback.print_exc(file=sys.stdout)
+      pass
+
+    redirect(url(controller='poll', action='showAll'))
+
+  @needLogin
   def editPoll(self):
     if (not 'poll_id' in request.params):
       redirect(url(controller='poll', action='showAll'))
@@ -147,7 +189,7 @@ class PollController(BaseController):
       c.heading = _('Edit poll')
       c.mode = 'edit'
 
-      if len(poll.votes) > 0:
+      if len(poll.submissions) > 0:
         session['flash'] = _('Cannot edit a running poll')
         session['flash_class'] = 'error'
         session.save()
@@ -157,6 +199,68 @@ class PollController(BaseController):
 
       return render('/poll/edit.mako')
     except:
+      import sys, traceback
+      traceback.print_exc(file=sys.stdout)
+      pass
+
+    redirect(url(controller='poll', action='showAll'))
+
+  @needLogin
+  def editQuestion(self):
+    if (not 'question_id' in request.params):
+      redirect(url(controller='poll', action='showAll'))
+
+    try:
+      question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
+      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
+
+      c.heading = _('Edit question')
+      c.mode = 'edit'
+
+      if len(poll.submissions) > 0:
+        session['flash'] = _('Cannot edit a running poll')
+        session['flash_class'] = 'error'
+        session.save()
+        redirect(url(controller='poll', action='showAll'))
+
+      c.poll = poll
+      c.question = question
+
+      return render('/poll/editQuestion.mako')
+    except:
+      import sys, traceback
+      traceback.print_exc(file=sys.stdout)
+      pass
+
+    redirect(url(controller='poll', action='showAll'))
+
+  @needLogin
+  def editAnswer(self):
+    if (not 'answer_id' in request.params):
+      redirect(url(controller='poll', action='showAll'))
+
+    try:
+      answer = Session.query(Answer).filter(Answer.id == request.params['answer_id']).one()
+      question = Session.query(Question).filter(Question.id == answer.question_id).one()
+      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
+
+      c.heading = _('Edit answer')
+      c.mode = 'edit'
+
+      if len(poll.submissions) > 0:
+        session['flash'] = _('Cannot edit a running poll')
+        session['flash_class'] = 'error'
+        session.save()
+        redirect(url(controller='poll', action='showAll'))
+
+      c.poll = poll
+      c.question = question
+      c.answer = answer
+
+      return render('/poll/editAnswer.mako')
+    except:
+      import sys, traceback
+      traceback.print_exc(file=sys.stdout)
       pass
 
     redirect(url(controller='poll', action='showAll'))
@@ -198,10 +302,6 @@ class PollController(BaseController):
         formok = False
         errors.append(_('Invalid expiration date'))
 
-      if not 'type' in request.params or (request.params['type'] != 'yesno' and request.params['type'] != 'yesnonull' and request.params['type'] != 'complex'):
-        formok = False
-        errors.append(_('Invalid type'))
-
       if not 'public' in request.params or (request.params['public'] != 'yes' and request.params['public'] != 'no'):
         formok = False
         errors.append(_('Invalid public'))
@@ -224,6 +324,97 @@ class PollController(BaseController):
       return f(self)
     return new_f
 
+  def _checkQuestion(f):
+    def new_f(self):
+      # @TODO request.params may contain multiple values per key... test & fix
+      formok = True
+      errors = []
+
+      if not 'poll_id' in request.params or not re.match(r'^\d+$', request.params['poll_id']):
+        formok = False
+        errors.append(_('Invalid form data'))
+
+      if not 'mode' in request.params or (request.params['mode'] != 'add' and request.params['mode'] != 'edit'):
+        formok = False
+        errors.append(_('Invalid form data'))
+
+      if request.params['mode'] == 'edit' and (not 'question_id' in request.params or request.params['question_id'] == '' or not re.match(r'^\d+$', request.params['question_id'])):
+        formok = False
+        errors.append(_('Invalid form data'))
+        # @TODO what do we do if no question id has been submitted but a form ?... add checks
+
+      if not 'question' in request.params or request.params['question'] == '' or len(request.params['question']) > 255:
+        formok = False
+        errors.append(_('Invalid question text'))
+
+      if  request.params['mode'] == 'add' and (not 'type' in request.params or (request.params['type'] != 'text' and request.params['type'] != 'radio' and request.params['type'] != 'check')):
+        formok = False
+        errors.append(_('Invalid type'))
+
+      if not formok:
+        session['errors'] = errors
+        session['reqparams'] = {}
+
+        # @TODO request.params may contain multiple values per key... test & fix
+        for k in request.params.iterkeys():
+          session['reqparams'][k] = request.params[k]
+          
+        session.save()
+
+        if request.params['mode'] == 'add':
+          redirect(url(controller='poll', action='addQuestion'))
+        else:
+          redirect(url(controller='poll', action='editQuestion'))
+
+      return f(self)
+    return new_f
+
+  def _checkAnswer(f):
+    def new_f(self):
+      # @TODO request.params may contain multiple values per key... test & fix
+      formok = True
+      errors = []
+
+      if not 'poll_id' in request.params or not re.match(r'^\d+$', request.params['poll_id']):
+        formok = False
+        errors.append(_('Invalid form data'))
+
+      if not 'question_id' in request.params or not re.match(r'^\d+$', request.params['question_id']):
+        formok = False
+        errors.append(_('Invalid form data'))
+
+      if not 'mode' in request.params or (request.params['mode'] != 'add' and request.params['mode'] != 'edit'):
+        formok = False
+        errors.append(_('Invalid form data'))
+
+      if request.params['mode'] == 'edit' and (not 'answer_id' in request.params or request.params['answer_id'] == '' or not re.match(r'^\d+$', request.params['answer_id'])):
+        formok = False
+        errors.append(_('Invalid form data'))
+        # @TODO what do we do if no question id has been submitted but a form ?... add checks
+
+      if not 'answer' in request.params or request.params['answer'] == '' or len(request.params['answer']) > 255:
+        formok = False
+        errors.append(_('Invalid question text'))
+
+
+      if not formok:
+        session['errors'] = errors
+        session['reqparams'] = {}
+
+        # @TODO request.params may contain multiple values per key... test & fix
+        for k in request.params.iterkeys():
+          session['reqparams'][k] = request.params[k]
+          
+        session.save()
+
+        if request.params['mode'] == 'add':
+          redirect(url(controller='poll', action='addAnswer'))
+        else:
+          redirect(url(controller='poll', action='editAnswer'))
+
+      return f(self)
+    return new_f
+
   @needLogin
   @_checkPoll
   @restrict('POST')
@@ -238,7 +429,6 @@ class PollController(BaseController):
       poll.name = request.params['name'].encode('utf8')
       poll.instructions = str(request.params['instructions'].encode('utf-8'))
       poll.expiration_date = request.params['expiration_date']
-      poll.type = request.params['type']
 
       if request.params['public'] == 'yes':
         poll.public = True
@@ -252,10 +442,10 @@ class PollController(BaseController):
       voters = request.params['voters'].split('\n')
       voters = list(set(voters))
       for v in voters:
-        vo = None
-        vo = Vote()
-        vo.poll_id = poll.id
-        vo.key = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(20))
+        p = None
+        p = Participant()
+        p.poll_id = poll.id
+        p.key = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(20))
         mailtext = '''\
         Hey,
 
@@ -267,7 +457,7 @@ class PollController(BaseController):
 
         The poll expires on %s
         ''' %\
-        (poll.name, vo.key, vo.key, poll.expiration_date)
+        (poll.name, p.key, p.key, poll.expiration_date)
 
         msg = MIMEText(mailtext, 'plain')
         msg['Subject'] = 'syn2cat - We need you to vote'
@@ -277,7 +467,7 @@ class PollController(BaseController):
         s.sendmail(msg['From'], v, msg.as_string())
         s.quit()
 
-        Session.add(vo)
+        Session.add(p)
 
       Session.commit()
 
@@ -285,14 +475,102 @@ class PollController(BaseController):
       session.save()
 
       redirect(url(controller='poll', action='showAll'))
-
     except LookupError:
+      import sys, traceback
+      traceback.print_exc(file=sys.stdout)
       print 'No such user !'
       session['flash'] = _('Failed to add poll')
       session['flash_class'] = 'error'
       session.save()
+    except:
+      import sys, traceback
+      traceback.print_exc(file=sys.stdout)
 
     redirect(url(controller='poll', action='showAll'))
+
+  @needLogin
+  @_checkQuestion
+  @restrict('POST')
+  def doEditQuestion(self):
+    transaction_ok = False
+
+    try:
+      if request.params['mode'] == 'edit':
+        question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
+        poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
+      else:
+        poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+        question = Question()
+        question.poll_id = poll.id
+        question.mandatory = 1
+
+      question.question = request.params['question'].encode('utf8')
+
+      if request.params['mode'] == 'add':
+        if request.params['type'] == 'text':
+          question.type = 1
+        elif request.params['type'] == 'radio':
+          question.type = 2
+        elif request.params['type'] == 'check':
+          question.type = 3
+
+        Session.add(question)
+
+      Session.commit()
+
+      session['flash'] = _('Question successfully edited')
+      session.save()
+
+      transaction_ok = True
+    except LookupError:
+      import sys, traceback
+      traceback.print_exc(file=sys.stdout)
+      session['flash'] = _('Failed to add question')
+      session['flash_class'] = 'error'
+      session.save()
+    except:
+      import sys, traceback
+      traceback.print_exc(file=sys.stdout)
+
+    if transaction_ok:
+      redirect(url(controller='poll', action='editQuestion', poll_id=poll.id, question_id=question.id))
+    else:
+      redirect(url(controller='poll', action='editPoll', poll_id=poll.id))
+
+  @needLogin
+  @_checkAnswer
+  @restrict('POST')
+  def doEditAnswer(self):
+    try:
+      question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
+      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+
+      if request.params['mode'] == 'edit':
+        answer = Session.query(Answer).filter(Answer.id == request.params['answer_id']).one()
+      else:
+        answer = Answer()
+        answer.question_id = question.id
+
+      answer.name = request.params['answer'].encode('utf8')
+
+      if request.params['mode'] == 'add':
+        Session.add(answer)
+
+      Session.commit()
+
+      session['flash'] = _('Answer successfully edited')
+      session.save()
+    except LookupError:
+      import sys, traceback
+      traceback.print_exc(file=sys.stdout)
+      session['flash'] = _('Failed to add answer')
+      session['flash_class'] = 'error'
+      session.save()
+    except:
+      import sys, traceback
+      traceback.print_exc(file=sys.stdout)
+
+    redirect(url(controller='poll', action='editQuestion', poll_id=request.params['poll_id'], question_id=request.params['question_id']))
 
   @needLogin
   def showResults(self):

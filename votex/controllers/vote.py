@@ -26,7 +26,7 @@ from pylons.controllers.util import redirect
 from pylons import config
 
 from votex.lib.base import BaseController, render, Session
-from votex.model.main import Poll, Vote
+from votex.model.main import Poll, Question, Answer, Participant, Submission
 
 log = logging.getLogger(__name__)
 
@@ -60,8 +60,8 @@ class VoteController(BaseController):
   def vote(self):
     if 'vote_key' in request.params and not request.params['vote_key'] == '':
       try:
-        vote = Session.query(Vote).filter(Vote.key == request.params['vote_key']).one()
-        poll = Session.query(Poll).filter(Poll.id == vote.poll_id).one()
+        participant = Session.query(Participant).filter(Participant.key == request.params['vote_key']).one()
+        poll = Session.query(Poll).filter(Poll.id == participant.poll_id).one()
 
         if datetime.now() > poll.expiration_date:
           session['flash'] = _('Sorry, poll has expired')
@@ -69,8 +69,8 @@ class VoteController(BaseController):
           session.save()
           redirect(url(controller='vote', action='vote'))
 
-        if vote.update_date is None:
-          c.poll = Session.query(Poll).filter(Poll.id == vote.poll_id).one()
+        if participant.update_date is None:
+          c.poll = poll
           c.vote_key = request.params['vote_key']
 
           return render('/vote/dovote.mako')
@@ -87,10 +87,10 @@ class VoteController(BaseController):
       redirect(url(controller='vote', action='vote'))
     else:
       try:
-        vote = Session.query(Vote).filter(Vote.key == request.params['vote_key']).one()
-        poll = Session.query(Poll).filter(Poll.id == vote.poll_id).one()
+        participant = Session.query(Participant).filter(Participant.key == request.params['vote_key']).one()
+        poll = Session.query(Poll).filter(Poll.id == participant.poll_id).one()
 
-        if not vote.update_date is None:
+        if not participant.update_date is None:
           redirect(url(controller='vote', action='vote'))
 
         if datetime.now() > poll.expiration_date:
