@@ -627,3 +627,46 @@ class PollController(BaseController):
       session.save()
 
     redirect(url(controller='poll', action='showAll'))
+
+  @needLogin
+  def deleteQuestion(self):
+    if (not 'poll_id' in request.params or not 'question_id' in request.params):
+      redirect(url(controller='poll', action='showAll'))
+
+    try:
+      question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
+      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
+
+      Session.delete(question)
+      Session.commit()
+      session['flash'] = _('Question successfully deleted')
+      session.save()
+    except Exception as e:
+      print e
+      session['flash'] = _('Failed to delete question')
+      session['flash_class'] = 'error'
+      session.save()
+
+    redirect(url(controller='poll', action='editPoll', poll_id=request.params['poll_id']))
+
+  @needLogin
+  def deleteAnswer(self):
+    if (not 'question_id' in request.params or not 'answer_id' in request.params):
+      redirect(url(controller='poll', action='showAll'))
+
+    try:
+      answer = Session.query(Answer).filter(Answer.id == request.params['answer_id']).one()
+      question = Session.query(Question).filter(Question.id == answer.question_id).one()
+      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
+
+      Session.delete(answer)
+      Session.commit()
+      session['flash'] = _('Question successfully deleted')
+      session.save()
+    except Exception as e:
+      print e
+      session['flash'] = _('Failed to delete question')
+      session['flash_class'] = 'error'
+      session.save()
+
+    redirect(url(controller='poll', action='editQuestion', question_id=request.params['question_id']))

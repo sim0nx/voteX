@@ -103,10 +103,13 @@ Questions:
   <tr>
     <td>
       ${_('Question')}
-      <a href="${url(controller='poll', action='editQuestion', poll_id=c.poll.id, question_id=q.id)}">Edit question</a>
     </td>
     <td>
       ${q.question}
+    </td>
+    <td>
+      <a href="${url(controller='poll', action='editQuestion', poll_id=c.poll.id, question_id=q.id)}">${_('edit')}</a>
+      <a href="${url(controller='poll', action='deleteQuestion', poll_id=c.poll.id, question_id=q.id)}">${_('delete')}</a>
     </td>
   </tr>
   <tr>
@@ -114,7 +117,13 @@ Questions:
       ${_('Type')}
     </td>
     <td>
-      ${q.type}
+      % if q.type == 1:
+      free text
+      % elif q.type == 2:
+      single choice
+      % elif q.type == 3:
+      multiple choice
+      % endif
     </td>
   </tr>
   % for a in q.answers:

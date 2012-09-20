@@ -82,7 +82,8 @@ if c.mode == 'edit':
       ${a.name}
     </td>
     <td>
-      <a href="${url(controller='poll', action='editAnswer', answer_id=a.id)}">Edit answer</a>
+      <a href="${url(controller='poll', action='editAnswer', answer_id=a.id)}">edit</a>
+      <a href="${url(controller='poll', action='deleteAnswer', question_id=a.question_id, answer_id=a.id)}">delete</a>
     </td>
   </tr>
   % endfor
