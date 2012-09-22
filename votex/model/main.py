@@ -62,6 +62,8 @@ class Answer(Base):
   question_id = Column(Integer, ForeignKey('question.id'), index=True)
   name = Column(String(255))
 
+  submissions = relationship('Submission')
+
   def __str(self):
     return "<Vote id=%s, poll_id=%s, update_date=%s, key=%s, simple_vote=%s, complex_vote=%s>" %\
       (self.id, self.poll_id, self.update_date, self.key, self.simple_vote, self.complex_vote)
@@ -85,6 +87,7 @@ class Submission(Base):
 
   id = Column(Integer, primary_key=True)
   poll_id = Column(Integer, ForeignKey('poll.id'), index=True)
+  question_id = Column(Integer, ForeignKey('question.id'), index=True)
   participant_id = Column(Integer, ForeignKey('participant.id'), index=True)
   answer_id = Column(Integer, ForeignKey('answer.id'), index=True)
   update_date = Column(DateTime)

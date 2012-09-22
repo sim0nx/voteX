@@ -53,7 +53,13 @@ def getFormVar(s, c, var):
   <tr>
   % for a in q.answers:
 		<td>
-			<input type="radio" name="question_${q.id}" value="${a.id}">${a.name}<br/>
+      % if q.type == 1:
+      <textarea rows='10' cols='60' name="question_t_${q.id}_${a.id}"></textarea>
+      % elif q.type == 2:
+  		<input type="radio" name="question_r_${q.id}_${a.id}" value="${a.id}">${a.name}<br/>
+      % elif q.type == 3:
+			<input type="checkbox" name="question_c_${q.id}_${a.id}" value="${a.id}">${a.name}<br/>
+      % endif
 		</td>
   % endfor
   </tr>

@@ -32,6 +32,7 @@ log = logging.getLogger(__name__)
 
 from votex.lib.helpers import *
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy import and_
 import re
 from pylons.decorators.rest import restrict
 from votex.lib.ldapConnector import LdapConnector
@@ -82,8 +83,7 @@ class VoteController(BaseController):
     return render('/vote/vote.mako')
 
   def doVote(self):
-    if not 'vote_key' in request.params or request.params['vote_key'] == '' or\
-      not 'vote' in request.params or request.params['vote'] == '':
+    if not 'vote_key' in request.params or request.params['vote_key'] == '':
       redirect(url(controller='vote', action='vote'))
     else:
       try:
@@ -91,6 +91,9 @@ class VoteController(BaseController):
         poll = Session.query(Poll).filter(Poll.id == participant.poll_id).one()
 
         if not participant.update_date is None:
+          session['flash'] = _('Sorry, your vote has already been submitted')
+          session['flash_class'] = 'error'
+          session.save()
           redirect(url(controller='vote', action='vote'))
 
         if datetime.now() > poll.expiration_date:
@@ -99,16 +102,51 @@ class VoteController(BaseController):
           session.save()
           redirect(url(controller='vote', action='vote'))
 
-        if poll.type == 'yesno' and (request.params['vote'] == 'yes' or request.params['vote'] == 'no'):
-          vote.simple_vote = request.params['vote']
-        elif poll.type == 'yesnonull' and (request.params['vote'] == 'yes' or request.params['vote'] == 'no' or request.params['vote'] == 'null'):
-          vote.simple_vote = request.params['vote']
-        elif poll.type == 'complex':
-          vote.complex_vote = request.params['vote']
-        else:
-          redirect(url(controller='vote', action='vote'))
+        for k in request.params:
+          if 'question' in k:
+            m = re.match(r'question_(t|r|c)_(\d+)(?:_(\d+))?', k)
+            if m and len(m.groups()) == 3:
+              if m.group(1) == 't':
+                q = Session.query(Question).filter(and_(Question.id == m.group(2), Question.poll_id == poll.id)).one()
+                a = Session.query(Answer).filter(and_(Answer.id == m.group(3), Answer.question_id == q.id)).one()
 
-        vote.update_date = datetime.now()
+                s = Submission()
+                s.poll_id = poll.id
+                s.question_id = q.id
+                s.answer_id = a.id
+                s.participant_id = participant.id
+                s.update_date = datetime.now()
+                s.answer_text = request.params[k]
+
+                Session.add(s)
+              elif m.group(1) == 'r':
+                q = Session.query(Question).filter(and_(Question.id == m.group(2), Question.poll_id == poll.id)).one()
+                a = Session.query(Answer).filter(and_(Answer.id == m.group(3), Answer.question_id == q.id)).one()
+
+                s = Submission()
+                s.poll_id = poll.id
+                s.question_id = q.id
+                s.answer_id = a.id
+                s.participant_id = participant.id
+                s.update_date = datetime.now()
+                s.answer_bool = 1
+
+                Session.add(s)
+              elif m.group(1) == 'c':
+                q = Session.query(Question).filter(and_(Question.id == m.group(2), Question.poll_id == poll.id)).one()
+                a = Session.query(Answer).filter(and_(Answer.id == m.group(3), Answer.question_id == q.id)).one()
+
+                s = Submission()
+                s.poll_id = poll.id
+                s.question_id = q.id
+                s.answer_id = a.id
+                s.participant_id = participant.id
+                s.update_date = datetime.now()
+                s.answer_bool = 1
+
+                Session.add(s)
+
+        #participant.update_date = datetime.now()
         Session.commit()
 
         session['flash'] = _('Vote successfully saved')
@@ -127,40 +165,39 @@ class VoteController(BaseController):
       return render('/vote/results.mako')
     else:
       try:
-        vote = Session.query(Vote).filter(Vote.key == request.params['vote_key']).one()
-        poll = Session.query(Poll).filter(Poll.id == vote.poll_id).one()
+        participant = Session.query(Participant).filter(Participant.key == request.params['vote_key']).one()
+        poll = Session.query(Poll).filter(Poll.id == participant.poll_id).one()
 
-        if vote.update_date is None:
+        if participant.update_date is None:
           session['flash'] = _('Vote first')
           session['flash_class'] = 'error'
           session.save()
-          redirect(url(controller='vote', action='vote'))
+          #redirect(url(controller='vote', action='vote'))
 
         c.poll = poll
-        votes = {}
-        votes['missing'] = 0
+        submissions = {}
 
-        if poll.type == 'yesno' or poll.type == 'yesnonull':
-          for v in poll.votes:
-            if v.simple_vote is None:
-              votes['missing'] += 1
-            elif not v.simple_vote in votes:
-              votes[v.simple_vote] = 1
-            else:
-              votes[v.simple_vote] += 1
+        for q in poll.questions:
+          if not q.type == 1:
+            for a in q.answers:
+              i = Session.query(Submission).filter(Submission.answer_id == a.id).count()
+              submissions[a.id] = i
+          else:
+            for a in q.answers:
+              all_a = Session.query(Submission).filter(Submission.answer_id == a.id).all()
+              for s_a in all_a:
+                if a.id in submissions:
+                  submissions[a.id].append(s_a.answer_text)
+                else:
+                  submissions[a.id] = []
+                  submissions[a.id].append(s_a.answer_text)
 
-        else:
-          for v in poll.votes:
-            if v.complex_vote is None:
-              votes['missing'] += 1
-            else:
-              votes[v.complex_vote] = 1
-
-        c.votes = votes
+        c.submissions = submissions
 
         return render('/vote/showResults.mako')
       except Exception as e:
-        print e
+        import sys, traceback
+        traceback.print_exc(file=sys.stdout)
         raise e
         pass
 

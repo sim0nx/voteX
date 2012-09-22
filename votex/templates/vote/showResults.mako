@@ -4,39 +4,31 @@
 <header style="background:#00ADEF; padding:5px; font-weight:bold; color:#fff;">${_('Results')}</header>
 <article>
 <table class="table_content">
-	${parent.all_messages()}
+  ${parent.all_messages()}
         <tr>
                 <td class="table_title">
                         ${_('Name')}
                 </td>
-		<td>
-			${c.poll.name}
-		</td>
-	</tr>
-	<tr>
+    <td>
+      ${c.poll.name}
+    </td>
+  </tr>
+  <tr>
                 <td class="table_title">
                         ${_('Instructions')}
                 </td>
-		<td>
-			% for l in c.poll.instructions.split('\n'):
-			${l}<br/>
-			% endfor
-		</td>
-       	</tr>
+    <td>
+      % for l in c.poll.instructions.split('\n'):
+      ${l}<br/>
+      % endfor
+    </td>
+        </tr>
         <tr>
                 <td class="table_title">
                         ${_('Expiration Date')} (YYYY-MM-DD HH:MM)
                 </td>
                 <td>
-			${c.poll.expiration_date}
-                </td>
-        </tr>
-        <tr>
-                <td class="table_title">
-                        ${_('Type')}
-                </td>
-                <td>
-			${c.poll.type}
+      ${c.poll.expiration_date}
                 </td>
         </tr>
         <tr>
@@ -44,20 +36,42 @@
                         ${_('Public')}
                 </td>
                 <td>
-			${c.poll.public}
+      ${c.poll.public}
                 </td>
         </tr>
 </table>
 
 Results:
+% for q in c.poll.questions:
 <table class="table_content">
-	% for k, v in c.votes.items():
-	<tr>
-		<td class="table_title">${k}</td>
-		<td>${v}</td>
-	</tr>
-	% endfor
+  <tr>
+    <td class="table_title">${_('Question')}</td>
+    <td class="table_title">${q.question}</td>
+  </tr>
+  % for a in q.answers:
+  <tr>
+    <td>${a.name}</td>
+    % if not q.type == 1:
+      % if a.id in c.submissions:
+    <td>${c.submissions[a.id]}</td>
+      % else:
+    <td>0</td>
+      % endif
+    % else:
+    <td>
+      % if a.id in c.submissions:
+        % for t in c.submissions[a.id]:
+        ${t}<br>
+        % endfor
+      % else:
+      &nbsp;
+      % endif
+    </td>
+    % endif
+  </tr>
+  % endfor
 </table>
+% endfor
 
 </article>
 <div id="make-space" class="prepend-top">&nbsp;</div>
@@ -65,6 +79,6 @@ Results:
 
 <%
 if 'reqparams' in session:
-	del session['reqparams']
-	session.save()
+  del session['reqparams']
+  session.save()
 %>
