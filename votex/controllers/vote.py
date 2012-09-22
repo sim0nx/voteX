@@ -196,10 +196,11 @@ class VoteController(BaseController):
         c.submissions = submissions
 
         return render('/vote/showResults.mako')
+      except NoResultFound:
+        redirect(url(controller='vote', action='vote'))
       except Exception as e:
         import sys, traceback
         traceback.print_exc(file=sys.stdout)
-        raise e
-        pass
+        redirect(url(controller='vote', action='vote'))
 
       return render('/vote/results.mako')
