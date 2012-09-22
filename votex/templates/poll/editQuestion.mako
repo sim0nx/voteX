@@ -70,7 +70,7 @@ if c.mode == 'edit':
 </form>
 
 % if c.mode is 'edit':
-<a href="${url(controller='poll', action='addAnswer', question_id=c.question.id)}">Add answer</a>
+<a href="${url(controller='poll', action='addAnswer', poll_id=c.poll.id, question_id=c.question.id)}">Add answer</a>
 
 <table>
   % for a in c.question.answers:
@@ -82,8 +82,8 @@ if c.mode == 'edit':
       ${a.name}
     </td>
     <td>
-      <a href="${url(controller='poll', action='editAnswer', answer_id=a.id)}">edit</a>
-      <a href="${url(controller='poll', action='deleteAnswer', question_id=a.question_id, answer_id=a.id)}">delete</a>
+      <a href="${url(controller='poll', action='editAnswer', poll_id=c.poll.id, answer_id=a.id)}">edit</a>
+      <a href="${url(controller='poll', action='deleteAnswer', poll_id=c.poll.id, question_id=a.question_id, answer_id=a.id)}">delete</a>
     </td>
   </tr>
   % endfor

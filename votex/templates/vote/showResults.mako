@@ -5,40 +5,40 @@
 <article>
 <table class="table_content">
   ${parent.all_messages()}
-        <tr>
-                <td class="table_title">
-                        ${_('Name')}
-                </td>
+  <tr>
+    <td class="table_title">
+      ${_('Name')}
+    </td>
     <td>
       ${c.poll.name}
     </td>
   </tr>
   <tr>
-                <td class="table_title">
-                        ${_('Instructions')}
-                </td>
+    <td class="table_title">
+      ${_('Instructions')}
+    </td>
     <td>
       % for l in c.poll.instructions.split('\n'):
       ${l}<br/>
       % endfor
     </td>
-        </tr>
-        <tr>
-                <td class="table_title">
-                        ${_('Expiration Date')} (YYYY-MM-DD HH:MM)
-                </td>
-                <td>
+  </tr>
+  <tr>
+    <td class="table_title">
+      ${_('Expiration Date')}
+    </td>
+    <td>
       ${c.poll.expiration_date}
-                </td>
-        </tr>
-        <tr>
-                <td class="table_title">
-                        ${_('Public')}
-                </td>
-                <td>
+    </td>
+  </tr>
+  <tr>
+    <td class="table_title">
+      ${_('Public')}
+    </td>
+    <td>
       ${c.poll.public}
-                </td>
-        </tr>
+    </td>
+  </tr>
 </table>
 
 Results:
@@ -59,13 +59,18 @@ Results:
       % endif
     % else:
     <td>
+      <table>
       % if a.id in c.submissions:
-        % for t in c.submissions[a.id]:
-        ${t}<br>
+        % for t in c.submissions[a.id]: 
+        <tr>
+          <td>Answer:</td>
+          <td>
+            ${t}
+          </td>
+        </tr>
         % endfor
-      % else:
-      &nbsp;
       % endif
+      </table>
     </td>
     % endif
   </tr>

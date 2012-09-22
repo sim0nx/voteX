@@ -110,6 +110,66 @@ class PollController(BaseController):
 
     return new_f
 
+  def checkPollIDSet(f):
+    def new_f(self):
+      if not 'poll_id' in request.params:
+        redirect(url(controller='poll', action='showAll'))
+      else:
+        try:
+          poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+
+          return f(self)
+        except:
+          session['flash'] = _('Invalid data')
+          session['flash_class'] = 'error'
+          session.save()
+          redirect(url(controller='poll', action='showAll'))
+
+      redirect(url(controller='poll', action='showAll'))
+
+    return new_f
+
+  def checkQuestionIDSet(f):
+    def new_f(self):
+      if not 'question_id' in request.params:
+        redirect(url(controller='poll', action='showAll'))
+      else:
+        return f(self)
+
+    return new_f
+
+  def checkAnswerIDSet(f):
+    def new_f(self):
+      if not 'answer_id' in request.params:
+        redirect(url(controller='poll', action='showAll'))
+      else:
+        return f(self)
+
+    return new_f
+
+  def checkIfRunningPoll(f):
+    def new_f(self):
+      try:
+        poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+
+        if len(poll.submissions) > 0:
+          session['flash'] = _('Cannot edit a running poll')
+          session['flash_class'] = 'error'
+          session.save()
+          #redirect(url(controller='poll', action='showAll'))
+          return f(self)
+        else:
+          return f(self)
+      except:
+        session['flash'] = _('Invalid data')
+        session['flash_class'] = 'error'
+        session.save()
+        redirect(url(controller='poll', action='showAll'))
+
+      redirect(url(controller='poll', action='login'))
+
+    return new_f
+
   @needLogin
   def showAll(self):
     c.heading = _('All polls')
@@ -136,11 +196,10 @@ class PollController(BaseController):
 
     return render('/poll/edit.mako')
 
+  @checkIfRunningPoll
+  @checkPollIDSet
   @needLogin
   def addQuestion(self):
-    if (not 'poll_id' in request.params):
-      redirect(url(controller='poll', action='showAll'))
-
     try:
       poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
 
@@ -156,11 +215,10 @@ class PollController(BaseController):
 
     redirect(url(controller='poll', action='showAll'))
 
+  @checkIfRunningPoll
+  @checkQuestionIDSet
   @needLogin
   def addAnswer(self):
-    if (not 'question_id' in request.params):
-      redirect(url(controller='poll', action='showAll'))
-
     try:
       question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
       poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
@@ -178,23 +236,15 @@ class PollController(BaseController):
 
     redirect(url(controller='poll', action='showAll'))
 
+  @checkIfRunningPoll
+  @checkPollIDSet
   @needLogin
   def editPoll(self):
-    if (not 'poll_id' in request.params):
-      redirect(url(controller='poll', action='showAll'))
-
     try:
       poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
 
       c.heading = _('Edit poll')
       c.mode = 'edit'
-
-      if len(poll.submissions) > 0:
-        session['flash'] = _('Cannot edit a running poll')
-        session['flash_class'] = 'error'
-        session.save()
-        redirect(url(controller='poll', action='showAll'))
-
       c.poll = poll
 
       return render('/poll/edit.mako')
@@ -205,24 +255,16 @@ class PollController(BaseController):
 
     redirect(url(controller='poll', action='showAll'))
 
+  @checkIfRunningPoll
+  @checkQuestionIDSet
   @needLogin
   def editQuestion(self):
-    if (not 'question_id' in request.params):
-      redirect(url(controller='poll', action='showAll'))
-
     try:
       question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
       poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
 
       c.heading = _('Edit question')
       c.mode = 'edit'
-
-      if len(poll.submissions) > 0:
-        session['flash'] = _('Cannot edit a running poll')
-        session['flash_class'] = 'error'
-        session.save()
-        redirect(url(controller='poll', action='showAll'))
-
       c.poll = poll
       c.question = question
 
@@ -234,11 +276,10 @@ class PollController(BaseController):
 
     redirect(url(controller='poll', action='showAll'))
 
+  @checkIfRunningPoll
+  @checkAnswerIDSet
   @needLogin
   def editAnswer(self):
-    if (not 'answer_id' in request.params):
-      redirect(url(controller='poll', action='showAll'))
-
     try:
       answer = Session.query(Answer).filter(Answer.id == request.params['answer_id']).one()
       question = Session.query(Question).filter(Question.id == answer.question_id).one()
@@ -246,13 +287,6 @@ class PollController(BaseController):
 
       c.heading = _('Edit answer')
       c.mode = 'edit'
-
-      if len(poll.submissions) > 0:
-        session['flash'] = _('Cannot edit a running poll')
-        session['flash_class'] = 'error'
-        session.save()
-        redirect(url(controller='poll', action='showAll'))
-
       c.poll = poll
       c.question = question
       c.answer = answer
@@ -607,11 +641,10 @@ class PollController(BaseController):
 
     redirect(url(controller='poll', action='showAll'))
 
+  @checkIfRunningPoll
+  @checkPollIDSet
   @needLogin
   def deletePoll(self):
-    if (not 'poll_id' in request.params):
-      redirect(url(controller='poll', action='showAll'))
-
     try:
       poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
       Session.query(Vote).filter(Vote.poll_id == poll.id).delete()
@@ -628,11 +661,11 @@ class PollController(BaseController):
 
     redirect(url(controller='poll', action='showAll'))
 
+  @checkIfRunningPoll
+  @checkQuestionIDSet
+  @checkPollIDSet
   @needLogin
   def deleteQuestion(self):
-    if (not 'poll_id' in request.params or not 'question_id' in request.params):
-      redirect(url(controller='poll', action='showAll'))
-
     try:
       question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
       poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
@@ -649,11 +682,11 @@ class PollController(BaseController):
 
     redirect(url(controller='poll', action='editPoll', poll_id=request.params['poll_id']))
 
+  @checkIfRunningPoll
+  @checkAnswerIDSet
+  @checkQuestionIDSet
   @needLogin
   def deleteAnswer(self):
-    if (not 'question_id' in request.params or not 'answer_id' in request.params):
-      redirect(url(controller='poll', action='showAll'))
-
     try:
       answer = Session.query(Answer).filter(Answer.id == request.params['answer_id']).one()
       question = Session.query(Question).filter(Question.id == answer.question_id).one()

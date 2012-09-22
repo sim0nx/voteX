@@ -165,6 +165,7 @@ class VoteController(BaseController):
       return render('/vote/results.mako')
     else:
       try:
+        print Session.query(Participant).filter(Participant.key == request.params['vote_key'])
         participant = Session.query(Participant).filter(Participant.key == request.params['vote_key']).one()
         poll = Session.query(Poll).filter(Poll.id == participant.poll_id).one()
 
