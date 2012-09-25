@@ -24,6 +24,7 @@ import logging
 from pylons import request, response, session, tmpl_context as c, url
 from pylons.controllers.util import redirect
 from pylons import config
+from webob.exc import HTTPFound
 
 from votex.lib.base import BaseController, render, Session
 from votex.model.main import Poll, Question, Answer, Participant, Submission
@@ -117,15 +118,13 @@ class PollController(BaseController):
       else:
         try:
           poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
-
-          return f(self)
         except:
           session['flash'] = _('Invalid data')
           session['flash_class'] = 'error'
           session.save()
           redirect(url(controller='poll', action='showAll'))
 
-      redirect(url(controller='poll', action='showAll'))
+      return f(self)
 
     return new_f
 
@@ -151,22 +150,23 @@ class PollController(BaseController):
     def new_f(self):
       try:
         poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
-
-        if len(poll.submissions) > 0:
-          session['flash'] = _('Cannot edit a running poll')
-          session['flash_class'] = 'error'
-          session.save()
-          #redirect(url(controller='poll', action='showAll'))
-          return f(self)
-        else:
-          return f(self)
       except:
+        import sys, traceback
+        traceback.print_exc(file=sys.stdout)
         session['flash'] = _('Invalid data')
         session['flash_class'] = 'error'
         session.save()
         redirect(url(controller='poll', action='showAll'))
 
-      redirect(url(controller='poll', action='login'))
+      if len(poll.submissions) > 0:
+        session['flash'] = _('Cannot edit a running poll')
+        session['flash_class'] = 'error'
+        session.save()
+        #redirect(url(controller='poll', action='showAll'))
+        # @TODO remove this following line
+        return f(self)
+
+      return f(self)
 
     return new_f
 
@@ -280,10 +280,22 @@ class PollController(BaseController):
   @checkAnswerIDSet
   @needLogin
   def editAnswer(self):
+    poll_id = None
+    question_id = None
+
     try:
       answer = Session.query(Answer).filter(Answer.id == request.params['answer_id']).one()
       question = Session.query(Question).filter(Question.id == answer.question_id).one()
       poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
+
+      poll_id = poll.id
+      question_id = question.id
+
+      if question.type == 1:
+        session['flash'] = _('Free text type is not editable')
+        session['flash_class'] = 'error'
+        session.save()
+        redirect(url(controller='poll', action='editQuestion', poll_id=poll.id, question_id=question.id))
 
       c.heading = _('Edit answer')
       c.mode = 'edit'
@@ -292,12 +304,20 @@ class PollController(BaseController):
       c.answer = answer
 
       return render('/poll/editAnswer.mako')
+    except HTTPFound:
+      pass
     except:
       import sys, traceback
       traceback.print_exc(file=sys.stdout)
       pass
 
-    redirect(url(controller='poll', action='showAll'))
+    if poll_id and question_id:
+      print 'ddd'
+      print poll_id
+      print question_id
+      redirect(url(controller='poll', action='editQuestion', poll_id=poll.id, question_id=question.id))
+    else:
+      redirect(url(controller='poll', action='showAll'))
 
   def _checkPoll(f):
     def new_f(self):
@@ -550,6 +570,13 @@ class PollController(BaseController):
 
         Session.add(question)
 
+        if request.params['type'] == 'text':
+          Session.flush()
+          a = Answer()
+          a.question_id = question.id
+          a.name = 'freetext'
+          Session.add(a)
+
       Session.commit()
 
       session['flash'] = _('Question successfully edited')
@@ -578,6 +605,13 @@ class PollController(BaseController):
     try:
       question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
       poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+
+      if question.type == 1:
+        session['flash'] = _('Free text type is not editable')
+        session['flash_class'] = 'error'
+        session.save()
+
+        redirect(url(controller='poll', action='editQuestion', poll_id=request.params['poll_id'], question_id=request.params['question_id']))
 
       if request.params['mode'] == 'edit':
         answer = Session.query(Answer).filter(Answer.id == request.params['answer_id']).one()
@@ -675,7 +709,6 @@ class PollController(BaseController):
       session['flash'] = _('Question successfully deleted')
       session.save()
     except Exception as e:
-      print e
       session['flash'] = _('Failed to delete question')
       session['flash_class'] = 'error'
       session.save()
@@ -692,12 +725,20 @@ class PollController(BaseController):
       question = Session.query(Question).filter(Question.id == answer.question_id).one()
       poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
 
+      if question.type == 1:
+        session['flash'] = _('Free text type is not editable')
+        session['flash_class'] = 'error'
+        session.save()
+
+        redirect(url(controller='poll', action='editQuestion', poll_id=poll.id, question_id=question.id))
+
       Session.delete(answer)
       Session.commit()
       session['flash'] = _('Question successfully deleted')
       session.save()
     except Exception as e:
-      print e
+      import sys, traceback
+      traceback.print_exc(file=sys.stdout)
       session['flash'] = _('Failed to delete question')
       session['flash_class'] = 'error'
       session.save()
