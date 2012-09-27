@@ -30,6 +30,17 @@ if c.mode == 'edit':
     type_check = 'checked'
   else:
     type_text = 'checked'
+else:
+  m_type = getFormVar(session, c, 'type')
+  if m_type == 'text':
+    type_text = 'checked'
+  elif m_type == 'radio':
+    type_radio = 'checked'
+  elif m_type == 'check':
+    type_check = 'checked'
+  else:
+    type_text = 'checked'
+
 %>
 
 <form method="post" action="${url(controller='poll', action='doEditQuestion')}" name="recordform">

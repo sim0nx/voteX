@@ -48,11 +48,7 @@ if c.mode == 'edit':
                         ${_('Instructions')}
                 </td>
 		<td>
-			% if c.mode is 'add':
 			<textarea rows='10' cols='60' name="instructions">${getFormVar(session, c, 'instructions')}</textarea>
-			% else:
-			<textarea rows='10' cols='60' name="instructions" disabled>${getFormVar(session, c, 'instructions')}</textarea>
-			% endif
 		</td>
        	</tr>
 	<tr>
