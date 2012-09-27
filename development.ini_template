@@ -21,6 +21,9 @@ use = egg:VoteX
 full_stack = true
 static_files = true
 
+auth.module = ldap
+auth.class = LDAPAuthBackend
+
 ldap.server = ldap://localhost
 ldap.basedn_users = ou=People,dc=local,dc=org
 
