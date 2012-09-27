@@ -35,7 +35,6 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy import and_
 import re
 from pylons.decorators.rest import restrict
-from votex.lib.ldapConnector import LdapConnector
 
 import smtplib
 from email.mime.text import MIMEText
