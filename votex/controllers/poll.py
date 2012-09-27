@@ -35,7 +35,6 @@ from votex.lib.helpers import *
 from sqlalchemy.orm.exc import NoResultFound
 import re
 from pylons.decorators.rest import restrict
-from votex.lib.ldapConnector import LdapConnector
 
 import smtplib
 from email.mime.text import MIMEText
@@ -54,6 +53,15 @@ class PollController(BaseController):
     super(PollController, self).__init__()
     self.uid = session.get('uid')
 
+    # initialize authentication backend
+    auth_module = config.get('auth.module')
+    auth_class = config.get('auth.class')
+
+    AuthMod = __import__('votex.lib.auth.' + auth_module, fromlist=[auth_class])
+    AuthClass = getattr(AuthMod, auth_class)
+    self.auth = AuthClass(session)
+    ##########
+
     if self.uid:
       c.actions = list()
       c.actions.append( (_('Show all polls'), 'poll', 'showAll') )
@@ -66,39 +74,13 @@ class PollController(BaseController):
     return render('/login.mako')
 
   def doLogin(self):
-    if not 'username' in request.params or request.params['username'] == '' or not 'password' in request.params or request.params['password'] == '':
-      print "crap"
-    else:
-
-      ret = False
-      try:   
-        ldapcon = LdapConnector(uid=request.params['username'], password=request.params['password'])
-        ret = True
-        print 'auth ok'
-      except:
-        print 'auth exception'
-        pass
-
-      if ret:
-        self._clearSession()
-
-        session['uid'] = request.params['username']
-        session.save()
-
-        redirect(url(controller='poll', action='showAll'))
+    if self.auth.auth(request.params['username'], request.params['password']):
+      redirect(url(controller='poll', action='showAll'))
 
     redirect(url(controller='poll', action='login'))
 
-  def _clearSession(self):
-    if not self.uid is None:
-      session['uid'] = None
-      del(session['uid'])
-      session.invalidate()
-      session.save()
-      session.delete()
-
   def logout(self):
-    self._clearSession()
+    self.auth.deauth()
 
     redirect(url(controller='poll', action='login'))
 
