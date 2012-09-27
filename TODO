@@ -1,0 +1,15 @@
+Pluggable auth backends:
+* SQL
+* http-basic
+* OAuth
+
+Misc:
+* fix mass mail handling
+* implement viewing of public polls
+* add graphs to result page
+* addressbook
+* CSRF for forms
+* allow users to modify their vote up to X hours before the poll ends
+  (make if configurable)
+* polish design
+* write proper docs
