@@ -26,7 +26,7 @@ from pylons.controllers.util import redirect
 from pylons import config
 from webob.exc import HTTPFound
 
-from votex.lib.base import BaseController, render, Session
+from votex.lib.base import BaseController, render, Session, flash, login_required, has_params
 from votex.lib import Authentication 
 
 from votex.model.main import Poll, Question, Answer, Participant, Submission
@@ -50,78 +50,13 @@ _ = gettext.gettext
 
 
 
-
-def flash(klass, msg):
-    session['flash'] = str(msg)
-    session['flash_class'] = klass
-    session.save()
-
-
-
-def login_required(f):
-    def new_f(self, *args, **kwargs):        
-        print '----------'
-        print self.session, '|', self.uid, self
-        if not self.uid:
-            raise Exception("User is not authenticated")
-        return f(self,*args, **kwargs)
-    return new_f
-
-
-
-
-
-class has_params:
-    def __init__(self,*args ):
-        self.args = args
-
-    def __call__(self, f):
-        print "Inside __call__()"
-        def wrapped_f(*args, **kwargs):
-            for k in self.args:
-                if not k in request.params:
-                    raise Exception("Key {} not found in request".format(str(k)))
-            return f(*args, **kwargs)
-        return wrapped_f
-
-
-
-
-
-
 class PollController(BaseController):
-
-  @property
-  def auth(self):
-    """Lazy built and return an authentication object"""
-    if not self.__auth:
-      self.__auth = Authentication(self.session, config)
-      
-    return self.__auth
-
-  def authenticate(self):
-    if not ('username' in request.params and 'password' in request.params):
-      return False
-
-    if not self.auth.auth(request.params['username'], request.params['password']):
-      flash('error', "Wrong credentials or user doesn't exist")
-      return False
-
-    self.uid = self.session.get('uid')
-
-    print '>>>', self.session, '<<<', self.uid, '|'
-    return True
-
-
 
   def __init__(self):
     super(PollController, self).__init__()
-    self.session = session
     self.uid = session.get('uid')
-    self.__auth = None
 
     if self.uid:
-      log.debug('we are authenticated')
       c.actions = list()
       c.actions.append( (_('Show all polls'), 'poll', 'showAll') )
       c.actions.append( (_('Add poll'), 'poll', 'addPoll') )
@@ -132,11 +67,11 @@ class PollController(BaseController):
     return render('/error.mako')
 
 
-  def login(self):    
-    if self.uid or self.authenticate():
-      redirect(url(controller='poll', action='showAll'))
+  def login(self):
+      if self.uid or self.authenticate():
+          redirect(url(controller='poll', action='showAll'))
 
-    return render('/login.mako')
+      return render('/login.mako')
 
 
   def logout(self):
@@ -155,7 +90,7 @@ class PollController(BaseController):
         s.name = s.name.encode('ascii','ignore')
       except:
         s.name ='poo...frickin P000000'
-        c.polls.append(s)
+      c.polls.append(s)
 
     return render('/poll/showAll.mako')
 

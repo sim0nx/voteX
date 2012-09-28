@@ -26,7 +26,6 @@ class Authentication:
 
     Backend modules should implement __auth__.
     """
-
     # sanity checks before calling backend
     if not (len(username) > 0 and len(username) < 64 and len(password) > 0 and len(password) < 64):
       log.debug("Username or password doesn't pass minimum requirements for user: {}".format(username))

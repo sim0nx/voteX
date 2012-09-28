@@ -39,9 +39,12 @@ def make_app(global_conf, full_stack=True, static_files=True, **app_conf):
     # The Pylons WSGI app
     app = PylonsApp(config=config)
 
+
     # Routing/Session Middleware
     app = RoutesMiddleware(app, config['routes.map'], singleton=False)
     app = SessionMiddleware(app, config)
+
+
 
     # CUSTOM MIDDLEWARE HERE (filtered by error handling middlewares)
 

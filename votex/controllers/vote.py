@@ -55,6 +55,10 @@ class VoteController(BaseController):
     super(VoteController, self).__init__()
 
   def index(self):
+    print "Sesson2", session
+    session['hello'] = "Hello World"
+    session.save()
+    print "Sessuion 1", session 
     return self.vote()
 
   def vote(self):
@@ -161,6 +165,7 @@ class VoteController(BaseController):
 
   def results(self):
     if not 'vote_key' in request.params or request.params['vote_key'] == '':
+      print 'Session in Vote:', session
       return render('/vote/results.mako')
     else:
       try:
