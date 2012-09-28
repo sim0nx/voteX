@@ -21,29 +21,24 @@ class AbstractAuthBackend:
 
     # sanity checks before calling backend
     if not (len(username) > 0 and len(username) < 64 and len(password) > 0 and len(password) < 64):
-      log.debug("Username or password doesn't pass minimum requirements for user: ".format(username))
+      log.debug("Username or password doesn't pass minimum requirements for user: {}".format(username))
       return False
 
 
     # Catch errors of third party authentication backends
     # if something goes wrong we refuse to authenticate
     is_authenticated = False
+
     try:
       is_authenticated = self.__auth__(username, password)
     except Exception as e:
-      is_authenticated = False
       log.debug("Authentication backend raised an exception: {}".format(str(e)))
-
-    
-    #---
-    # TODO should we fall back on some default backend?
-    #---
-      
 
     if is_authenticated:
       self.initSession(username)
       log.debug("User authenticated: {}".format(username))
       return True
+
     else:
       log.debug("Couldn't authenticate user: {}".format(username))
       return False
