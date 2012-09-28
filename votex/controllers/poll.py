@@ -27,6 +27,8 @@ from pylons import config
 from webob.exc import HTTPFound
 
 from votex.lib.base import BaseController, render, Session
+from votex.lib import Authentication 
+
 from votex.model.main import Poll, Question, Answer, Participant, Submission
 
 log = logging.getLogger(__name__)
@@ -47,261 +49,200 @@ _ = gettext.gettext
 
 
 
+
+
+def flash(klass, msg):
+    session['flash'] = str(msg)
+    session['flash_class'] = klass
+    session.save()
+
+
+
+def login_required(f):
+    def new_f(self, *args, **kwargs):        
+        print '----------'
+        print self.session, '|', self.uid, self
+        if not self.uid:
+            raise Exception("User is not authenticated")
+        return f(self,*args, **kwargs)
+    return new_f
+
+
+
+
+
+class has_params:
+    def __init__(self,*args ):
+        self.args = args
+
+    def __call__(self, f):
+        print "Inside __call__()"
+        def wrapped_f(*args, **kwargs):
+            for k in self.args:
+                if not k in request.params:
+                    raise Exception("Key {} not found in request".format(str(k)))
+            return f(*args, **kwargs)
+        return wrapped_f
+
+
+
+
+
+
 class PollController(BaseController):
+
+  @property
+  def auth(self):
+    """Lazy built and return an authentication object"""
+    if not self.__auth:
+      self.__auth = Authentication(self.session, config)
+      
+    return self.__auth
+
+  def authenticate(self):
+    if not ('username' in request.params and 'password' in request.params):
+      return False
+
+    if not self.auth.auth(request.params['username'], request.params['password']):
+      flash('error', "Wrong credentials or user doesn't exist")
+      return False
+
+    self.uid = self.session.get('uid')
+
+    print '>>>', self.session, '<<<', self.uid, '|'
+    return True
+
+
 
   def __init__(self):
     super(PollController, self).__init__()
+    self.session = session
     self.uid = session.get('uid')
-
-    # initialize authentication backend
-    auth_module = config.get('auth.module')
-    auth_class = config.get('auth.class')
-
-    AuthMod = __import__('votex.lib.auth.' + auth_module, fromlist=[auth_class])
-    AuthClass = getattr(AuthMod, auth_class)
-    self.auth = AuthClass(session)
-    ##########
+    self.__auth = None
 
     if self.uid:
+      log.debug('we are authenticated')
       c.actions = list()
       c.actions.append( (_('Show all polls'), 'poll', 'showAll') )
       c.actions.append( (_('Add poll'), 'poll', 'addPoll') )
 
-  def login(self):
-    if not self.uid is None:
+
+  def onError(self, exception):
+    flash('error', exception)
+    return render('/error.mako')
+
+
+  def login(self):    
+    if self.uid or self.authenticate():
       redirect(url(controller='poll', action='showAll'))
 
     return render('/login.mako')
 
-  def doLogin(self):
-    if self.auth.auth(request.params['username'], request.params['password']):
-      redirect(url(controller='poll', action='showAll'))
-
-    redirect(url(controller='poll', action='login'))
 
   def logout(self):
     self.auth.deauth()
-
     redirect(url(controller='poll', action='login'))
 
-  def needLogin(f):
-    def new_f(self):
-      if not self.uid is None:
-        return f(self)
-      else:
-        redirect(url(controller='poll', action='login'))
 
-    return new_f
-
-  def checkPollIDSet(f):
-    def new_f(self):
-      if not re.match(r'^\d+$', request.params.get('poll_id', '')):
-        redirect(url(controller='poll', action='showAll'))
-      else:
-        try:
-          poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
-        except:
-          session['flash'] = _('Poll does not exist')
-          session['flash_class'] = 'error'
-          session.save()
-          redirect(url(controller='poll', action='showAll'))
-
-      return f(self)
-
-    return new_f
-
-  def checkQuestionIDSet(f):
-    def new_f(self):
-      if not 'question_id' in request.params:
-        redirect(url(controller='poll', action='showAll'))
-      else:
-        return f(self)
-
-    return new_f
-
-  def checkAnswerIDSet(f):
-    def new_f(self):
-      if not 'answer_id' in request.params:
-        redirect(url(controller='poll', action='showAll'))
-      else:
-        return f(self)
-
-    return new_f
-
-  def checkIfRunningPoll(f):
-    def new_f(self):
-      poll_id = request.params.get('poll_id', '')
-
-      try:
-        poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == poll_id).one()
-      except:
-        import sys, traceback
-        traceback.print_exc(file=sys.stdout)
-        session['flash'] = _('Poll does not exist')
-        session['flash_class'] = 'error'
-        session.save()
-        redirect(url(controller='poll', action='showAll'))
-
-      if len(poll.submissions) > 0:
-        #session['flash'] = _('Cannot edit a running poll')
-        #session['flash_class'] = 'error'
-        session.save()
-        #redirect(url(controller='poll', action='showAll'))
-        # @TODO remove this following line
-        return f(self)
-
-      return f(self)
-
-    return new_f
-
-  @needLogin
+  @login_required
   def showAll(self):
     c.heading = _('All polls')
     c.polls = []
 
-    try:
-      polls = Session.query(Poll).filter(Poll.owner == self.uid).all()
-
-      for s in polls:
-        try:
-          s.name = s.name.encode('ascii','ignore')
-        except:
-          s.name ='poo...frickin P000000'
-
+    polls = Session.query(Poll).filter(Poll.owner == self.uid).all()
+    for s in polls:
+      try:
+        s.name = s.name.encode('ascii','ignore')
+      except:
+        s.name ='poo...frickin P000000'
         c.polls.append(s)
-    except NoResultFound:
-      print 'No such poll'
 
     return render('/poll/showAll.mako')
 
-  @needLogin
+
+
+  @login_required
   def addPoll(self):
     c.mode = 'add'
+    return render('/poll/edit.mako')
+
+
+
+  @has_params('poll_id')
+  @login_required
+  def addQuestion(self):
+    poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+
+    c.heading = _('Add question')
+    c.mode = 'add'
+    c.poll = poll
+
+    return render('/poll/editQuestion.mako')
+
+
+  @has_params('question_id')
+  @login_required
+  def addAnswer(self):
+    question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
+    poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
+
+    c.heading = _('Add answer')
+    c.mode = 'add'
+    c.poll = poll
+    c.question = question
+
+    return render('/poll/editAnswer.mako')
+
+
+  @has_params('poll_id')
+  @login_required
+  def editPoll(self):
+    poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+
+    c.heading = _('Edit poll')
+    c.mode = 'edit'
+    c.poll = poll
 
     return render('/poll/edit.mako')
 
-  @checkIfRunningPoll
-  @checkPollIDSet
-  @needLogin
-  def addQuestion(self):
-    try:
-      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
 
-      c.heading = _('Add question')
-      c.mode = 'add'
-      c.poll = poll
-
-      return render('/poll/editQuestion.mako')
-    except:
-      import sys, traceback
-      traceback.print_exc(file=sys.stdout)
-      pass
-
-    redirect(url(controller='poll', action='showAll'))
-
-  @checkIfRunningPoll
-  @checkQuestionIDSet
-  @needLogin
-  def addAnswer(self):
-    try:
-      question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
-      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
-
-      c.heading = _('Add answer')
-      c.mode = 'add'
-      c.poll = poll
-      c.question = question
-
-      return render('/poll/editAnswer.mako')
-    except:
-      import sys, traceback
-      traceback.print_exc(file=sys.stdout)
-      pass
-
-    redirect(url(controller='poll', action='showAll'))
-
-  @checkIfRunningPoll
-  @checkPollIDSet
-  @needLogin
-  def editPoll(self):
-    try:
-      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
-
-      c.heading = _('Edit poll')
-      c.mode = 'edit'
-      c.poll = poll
-
-      return render('/poll/edit.mako')
-    except:
-      import sys, traceback
-      traceback.print_exc(file=sys.stdout)
-      pass
-
-    redirect(url(controller='poll', action='showAll'))
-
-  @checkIfRunningPoll
-  @checkQuestionIDSet
-  @needLogin
+  @has_params('question_id')
+  @login_required
   def editQuestion(self):
-    try:
-      question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
-      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
+    question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
+    poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
+    
+    c.heading = _('Edit question')
+    c.mode = 'edit'
+    c.poll = poll
+    c.question = question
 
-      c.heading = _('Edit question')
-      c.mode = 'edit'
-      c.poll = poll
-      c.question = question
+    return render('/poll/editQuestion.mako')
 
-      return render('/poll/editQuestion.mako')
-    except:
-      import sys, traceback
-      traceback.print_exc(file=sys.stdout)
-      pass
 
-    redirect(url(controller='poll', action='showAll'))
 
-  @checkIfRunningPoll
-  @checkAnswerIDSet
-  @needLogin
+  @has_params('answer_id')
+  @login_required
   def editAnswer(self):
-    poll_id = None
-    question_id = None
+    answer = Session.query(Answer).filter(Answer.id == request.params['answer_id']).one()
+    question = Session.query(Question).filter(Question.id == answer.question_id).one()
+    poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
 
-    try:
-      answer = Session.query(Answer).filter(Answer.id == request.params['answer_id']).one()
-      question = Session.query(Question).filter(Question.id == answer.question_id).one()
-      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
+    poll_id = poll.id
+    question_id = question.id
 
-      poll_id = poll.id
-      question_id = question.id
-
-      if question.type == 1:
-        session['flash'] = _('Free text type is not editable')
-        session['flash_class'] = 'error'
-        session.save()
-        redirect(url(controller='poll', action='editQuestion', poll_id=poll.id, question_id=question.id))
-
-      c.heading = _('Edit answer')
-      c.mode = 'edit'
-      c.poll = poll
-      c.question = question
-      c.answer = answer
-
-      return render('/poll/editAnswer.mako')
-    except HTTPFound:
-      pass
-    except:
-      import sys, traceback
-      traceback.print_exc(file=sys.stdout)
-      pass
-
-    if poll_id and question_id:
-      print 'ddd'
-      print poll_id
-      print question_id
+    if question.type == 1:
+      self.flash('error', _('Free text type is not editable'))
       redirect(url(controller='poll', action='editQuestion', poll_id=poll.id, question_id=question.id))
-    else:
-      redirect(url(controller='poll', action='showAll'))
+
+    c.heading = _('Edit answer')
+    c.mode = 'edit'
+    c.poll = poll
+    c.question = question
+    c.answer = answer
+
+    return render('/poll/editAnswer.mako')
+    
 
   def _checkPoll(f):
     def new_f(self):
@@ -470,8 +411,10 @@ class PollController(BaseController):
       return f(self)
     return new_f
 
+
+
   @_checkPoll
-  @needLogin
+  @login_required
   @restrict('POST')
   def doEditPoll(self):
     try:
@@ -545,8 +488,8 @@ class PollController(BaseController):
     redirect(url(controller='poll', action='showAll'))
 
   @_checkQuestion
-  @checkPollIDSet
-  @needLogin
+  @has_params('poll_id')
+  @login_required
   @restrict('POST')
   def doEditQuestion(self):
     transaction_ok = False
@@ -603,9 +546,8 @@ class PollController(BaseController):
       redirect(url(controller='poll', action='editPoll', poll_id=poll.id))
 
   @_checkAnswer
-  @checkQuestionIDSet
-  @checkPollIDSet
-  @needLogin
+  @has_params('question_id', 'poll_id')
+  @login_required
   @restrict('POST')
   def doEditAnswer(self):
     try:
@@ -647,7 +589,7 @@ class PollController(BaseController):
 
     redirect(url(controller='poll', action='editQuestion', poll_id=request.params['poll_id'], question_id=request.params['question_id']))
 
-  @needLogin
+  @login_required
   def showResults(self):
     if (not 'poll_id' in request.params):
       redirect(url(controller='poll', action='showAll'))
@@ -682,78 +624,53 @@ class PollController(BaseController):
 
     redirect(url(controller='poll', action='showAll'))
 
-  @checkIfRunningPoll
-  @checkPollIDSet
-  @needLogin
+
+  @has_params('poll_id')
+  @login_required
   def deletePoll(self):
-    try:
-      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
-      Session.query(Vote).filter(Vote.poll_id == poll.id).delete()
+    poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+    Session.query(Vote).filter(Vote.poll_id == poll.id).delete()
 
-      Session.delete(poll)
-      Session.commit()
-      session['flash'] = _('Poll successfully deleted')
-      session['flash_class'] = 'success'
-      session.save()
-    except Exception as e:
-      print e
-      session['flash'] = _('Failed to delete poll')
-      session['flash_class'] = 'error'
-      session.save()
+    Session.delete(poll)
+    Session.commit()
+    session['flash'] = _('Poll successfully deleted')
+    session['flash_class'] = 'success'
+    session.save()
 
-    redirect(url(controller='poll', action='showAll'))
 
-  @checkIfRunningPoll
-  @checkQuestionIDSet
-  @checkPollIDSet
-  @needLogin
+  @has_params('question_id', 'poll_id')
+  @login_required
   def deleteQuestion(self):
-    try:
-      question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
-      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
+    question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
+    poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
 
-      Session.delete(question)
-      Session.commit()
-      session['flash'] = _('Question successfully deleted')
-      session['flash_class'] = 'success'
-      session.save()
-    except Exception as e:
-      session['flash'] = _('Failed to delete question')
-      session['flash_class'] = 'error'
-      session.save()
+    Session.delete(question)
+    Session.commit()
+    session['flash'] = _('Question successfully deleted')
+    session['flash_class'] = 'success'
+    session.save()
 
-    redirect(url(controller='poll', action='editPoll', poll_id=request.params['poll_id']))
 
-  @checkIfRunningPoll
-  @checkAnswerIDSet
-  @checkQuestionIDSet
-  @needLogin
+
+  @has_params('question_id', 'anwser_id')
+  @login_required
   def deleteAnswer(self):
-    poll_id = 0
+    answer = Session.query(Answer).filter(Answer.id == request.params['answer_id']).one()
+    question = Session.query(Question).filter(Question.id == answer.question_id).one()
+    poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
+    poll_id = poll.id
 
-    try:
-      answer = Session.query(Answer).filter(Answer.id == request.params['answer_id']).one()
-      question = Session.query(Question).filter(Question.id == answer.question_id).one()
-      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
-      poll_id = poll.id
-
-      if question.type == 1:
-        session['flash'] = _('Free text type is not editable')
-        session['flash_class'] = 'error'
-        session.save()
-
-        redirect(url(controller='poll', action='editQuestion', poll_id=poll.id, question_id=question.id))
-
-      Session.delete(answer)
-      Session.commit()
-      session['flash'] = _('Answer successfully deleted')
-      session['flash_class'] = 'success'
-      session.save()
-    except Exception as e:
-      import sys, traceback
-      traceback.print_exc(file=sys.stdout)
-      session['flash'] = _('Failed to delete question')
+    if question.type == 1:
+      session['flash'] = _('Free text type is not editable')
       session['flash_class'] = 'error'
       session.save()
 
+      redirect(url(controller='poll', action='editQuestion', poll_id=poll.id, question_id=question.id))
+
+    Session.delete(answer)
+    Session.commit()
+    session['flash'] = _('Answer successfully deleted')
+    session['flash_class'] = 'success'
+    session.save()
+    
     redirect(url(controller='poll', action='editQuestion', poll_id=poll_id, question_id=request.params['question_id']))

@@ -1,16 +1,24 @@
-from abc import ABCMeta, abstractmethod
 import logging
 log = logging.getLogger(__name__)
 
 
-class AbstractAuthBackend:
-  __metaclass__ = ABCMeta
 
-  def __init__(self, session):
+
+
+class Authentication:
+
+  def __init__(self, session, config):
     self.session = session
+    self.config = config
 
+    auth_module = config.get('auth.module')
+    auth_class = config.get('auth.class')
 
+    AuthMod = __import__('votex.lib.auth.' + auth_module, fromlist=[auth_class])
+    AuthClass = getattr(AuthMod, auth_class)
 
+    self.__authenticator = AuthClass()
+    
 
     
   def auth(self, username, password):
@@ -30,7 +38,7 @@ class AbstractAuthBackend:
     is_authenticated = False
 
     try:
-      is_authenticated = self.__auth__(username, password)
+      is_authenticated = self.__authenticator(username, password)
     except Exception as e:
       log.debug("Authentication backend raised an exception: {}".format(str(e)))
 
@@ -44,17 +52,6 @@ class AbstractAuthBackend:
       return False
     
 
-  
-  @abstractmethod
-  def __auth__(self,username, password):
-    """This method should be overriden
-
-    Should return True/False or raise an Exception with an error description 
-    if username exists and the passwords match. 
-    """
-    return False
-
-
   def deauth(self):
     if 'uid' in self.session:
       self.session['uid'] = None
@@ -63,7 +60,7 @@ class AbstractAuthBackend:
       self.session.save()
       self.session.delete()
 
-  def initSession(self, username):
+  def initSession(self, username):        
     self.deauth()
 
     self.session['uid'] = username

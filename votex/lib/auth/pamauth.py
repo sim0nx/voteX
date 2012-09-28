@@ -1,8 +1,7 @@
-from votex.lib.auth.baseauth import AbstractAuthBackend
 import pam
 
 
-class PAMAuthBackend(AbstractAuthBackend):
+class PAMAuthBackend:
     """Authenticate the user with PAM
 
     PAM can be configured to use different backends like
@@ -15,9 +14,5 @@ class PAMAuthBackend(AbstractAuthBackend):
     auth.module = pamauth
     auth.class = PAMAuthBackend
     """
-
-    def __init__(self, session):
-        super(PAMAuthBackend, self).__init__(session)
-            
-    def __auth__(self, username, password):
+    def __call__(self, username, password):
         return pam.authenticate(username, password,service="votex")
