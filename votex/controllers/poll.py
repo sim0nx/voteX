@@ -19,24 +19,21 @@
 # -*- coding: utf-8 -*-"
 
 
-import logging
 
 from pylons import request, response, session, tmpl_context as c, url
 from pylons.controllers.util import redirect
 from pylons import config
 from webob.exc import HTTPFound
 
-from votex.lib.base import BaseController, render, Session, flash, login_required, has_params
-from votex.lib import Authentication 
-
+from votex.lib.base import BaseController, render, Session, flash, require_login, require
 from votex.model.main import Poll, Question, Answer, Participant, Submission
 
+import logging
 log = logging.getLogger(__name__)
 
 from votex.lib.helpers import *
 from sqlalchemy.orm.exc import NoResultFound
 import re
-from pylons.decorators.rest import restrict
 
 import smtplib
 from email.mime.text import MIMEText
@@ -74,7 +71,7 @@ class PollController(BaseController):
     redirect(url(controller='poll', action='login'))
 
 
-  @login_required
+  @require_login
   def showAll(self):
     c.heading = _('All polls')
     c.polls = []
@@ -91,15 +88,14 @@ class PollController(BaseController):
 
 
 
-  @login_required
+  @require_login
   def addPoll(self):
     c.mode = 'add'
     return render('/poll/edit.mako')
 
 
 
-  @has_params('poll_id')
-  @login_required
+  @require('Login', 'PollID', 'RunningPoll')
   def addQuestion(self):
     poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
 
@@ -110,8 +106,7 @@ class PollController(BaseController):
     return render('/poll/editQuestion.mako')
 
 
-  @has_params('question_id')
-  @login_required
+  @require('Login', 'QuestionID', 'RunningPoll')
   def addAnswer(self):
     question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
     poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
@@ -124,8 +119,7 @@ class PollController(BaseController):
     return render('/poll/editAnswer.mako')
 
 
-  @has_params('poll_id')
-  @login_required
+  @require('Login', 'PollID', 'RunningPoll')
   def editPoll(self):
     poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
 
@@ -136,8 +130,7 @@ class PollController(BaseController):
     return render('/poll/edit.mako')
 
 
-  @has_params('question_id')
-  @login_required
+  @require('Login', 'QuestionId', 'RunningPoll')
   def editQuestion(self):
     question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
     poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
@@ -150,9 +143,7 @@ class PollController(BaseController):
     return render('/poll/editQuestion.mako')
 
 
-
-  @has_params('answer_id')
-  @login_required
+  @require('Login', 'AnswerID', 'RunningPoll')
   def editAnswer(self):
     answer = Session.query(Answer).filter(Answer.id == request.params['answer_id']).one()
     question = Session.query(Question).filter(Question.id == answer.question_id).one()
@@ -174,141 +165,10 @@ class PollController(BaseController):
     return render('/poll/editAnswer.mako')
     
 
-  def validatePollParams(self):
-    # @TODO request.params may contain multiple values per key... test & fix
-    modeEdit = (request.params.get('mode', '') == 'edit')
-    errors = []
-
-    if not re.match(r'^(add|edit)$', request.params.get('mode', '')):
-      errors.append(_('Invalid form data'))
-
-    if modeEdit and not re.match(r'^\d+$', request.params.get('poll_id', '')):
-      errors.append(_('Invalid form data'))
-
-    name_len = len(request.params.get('name', ''))
-    if not modeEdit and not (name_len > 0 and name_len < 255):
-      errors.append(_('Invalid name'))
-
-    instructions_len = len(request.params.get('instructions', ''))
-    if not (instructions_len > 0 and instructions_len < 1000):
-      errors.append(_('Invalid instructions'))
-
-    if request.params.get('voters', '') == '':
-      errors.append(_('Invalid voters'))
-    else:
-      # @TODO this is not enough ... need more checks
-      voters = request.params['voters'].split('\n')
-      for v in voters:
-        if not re.match(r'\b[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}\b', v, re.I):
-          errors.append(_('Invalid voters'))
-          break
-
-    if not 'expiration_date' in request.params or not re.match(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}', request.params['expiration_date']):
-      errors.append(_('Invalid expiration date'))
-
-    if not re.match(r'^(yes|no)$', request.params.get('public', '')):
-      errors.append(_('Invalid public'))
-
-    if len(errors) > 0:
-      session['errors'] = errors
-      session['reqparams'] = {}
-      
-      # @TODO request.params may contain multiple values per key... test & fix
-      for k in request.params.iterkeys():
-        session['reqparams'][k] = request.params[k]
-          
-      session.save()
-      return False
-    else:
-      return True
 
 
-  def validateQuestionParams(self):
-    # @TODO request.params may contain multiple values per key... test & fix
-    errors = []
-    modeEdit = (request.params.get('mode', '') == 'edit')
-
-    if not re.match(r'^\d+$', request.params.get('poll_id', '')):
-      errors.append(_('Invalid form data'))
-
-    if not re.match(r'^(add|edit)$', request.params.get('mode', '')):
-      errors.append(_('Invalid form data'))
-
-    if modeEdit and not re.match(r'^\d+$', request.params.get('question_id', '')):
-      errors.append(_('Invalid form data'))
-      # @TODO what do we do if no question id has been submitted but a form ?... add checks
-
-    question_len = len(request.params.get('question', ''))
-    if not (question_len > 0 and question_len < 255):
-      errors.append(_('Invalid question text'))
-
-    if not modeEdit and not re.match(r'(^text|radio|check)$', request.params.get('type', '')):
-      errors.append(_('Invalid type'))
-
-    if len(error) > 0:
-      session['errors'] = errors
-      session['reqparams'] = {}
-
-      # @TODO request.params may contain multiple values per key... test & fix
-      for k in request.params.iterkeys():
-        session['reqparams'][k] = request.params[k]
-          
-      session.save()
-      return False
-    else:
-      return True
-
-    
-  def validateAnswerParams(f):
-    # @TODO request.params may contain multiple values per key... test & fix
-    errors = []
-    modeEdit = (request.params.get('mode', '') == 'edit')
-
-    if not re.match(r'^\d+$', request.params.get('poll_id', '')):
-      errors.append(_('Invalid form data'))
-
-    if not re.match(r'^\d+$', request.params.get('question_id', '')):      
-      errors.append(_('Invalid form data'))
-
-    if not re.match(r'^(add|edit)$', request.params.get('mode', '')):
-      errors.append(_('Invalid form data'))
-
-    if modeEdit and not re.match(r'^\d+$', request.params.get('answer_id', '')):
-      errors.append(_('Invalid form data'))
-      # @TODO what do we do if no question id has been submitted but a form ?... add checks
-
-    answer_len = len(request.params.get('answer', ''))
-    if not (answer_len > 0 and answer_len < 255):
-      errors.append(_('Invalid answer text'))
-
-
-    if len(errors) > 0:
-      session['errors'] = errors
-      session['reqparams'] = {}
-
-      # @TODO request.params may contain multiple values per key... test & fix
-      for k in request.params.iterkeys():
-        session['reqparams'][k] = request.params[k]          
-      
-      session.save()
-      return False
-    else:
-      return True
-      
-      
-
-
-
-  @login_required
-  @restrict('POST')
+  @require('POST', 'Login', 'PollParams')
   def doEditPoll(self):
-    if not self.validatePollParams():
-      if request.params['mode'] == 'add':
-        redirect(url(controller='poll', action='addPoll'))
-      else:
-        redirect(url(controller='poll', action='editPoll', poll_id=request.params['poll_id']))
-
-    
     if request.params['mode'] == 'edit':
       poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
     else:
@@ -359,17 +219,9 @@ class PollController(BaseController):
 
 
 
-  @has_params('poll_id')
-  @login_required
-  @restrict('POST')
+  
+  @require('POST', 'Login', 'PollID', 'QuestionParams')
   def doEditQuestion(self):
-    if not self.validateQuestionParams():
-      if request.params.get('mode', '') == 'edit':
-         redirect(url(controller='poll', action='editQuestion', poll_id=request.params['poll_id'], 
-                   question_id=request.params['question_id']))
-      else:
-         redirect(url(controller='poll', action='addQuestion', poll_id=request.params['poll_id']))
-
     if request.params['mode'] == 'edit':
       question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
       poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
@@ -404,22 +256,8 @@ class PollController(BaseController):
     
 
 
-  @has_params('question_id', 'poll_id')
-  @login_required
-  @restrict('POST')
+  @require('POST', 'Login', 'QuestionID', 'PollID', 'AnswerParams')
   def doEditAnswer(self):
-
-    # pre validate params
-    if not self.validateAnswerParams():
-      if request.params['mode'] == 'add':
-        redirect(url(controller='poll', action='addAnswer', poll_id=request.params['poll_id'], 
-                     question_id=request.params['question_id']))
-      else:
-        redirect(url(controller='poll', action='editAnswer', poll_id=request.params['poll_id'], 
-                     question_id=request.params['question_id'], answer_id=request.params['answer_id']))
-
-
-
     question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
     poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
 
@@ -444,7 +282,7 @@ class PollController(BaseController):
     flash('success', _('Answer successfully edited'))
     redirect(url(controller='poll', action='editQuestion', poll_id=request.params['poll_id'], question_id=request.params['question_id']))
 
-  @login_required
+  @require_login
   def showResults(self):
     if (not 'poll_id' in request.params):
       redirect(url(controller='poll', action='showAll'))
@@ -474,8 +312,7 @@ class PollController(BaseController):
 
 
 
-  @has_params('poll_id')
-  @login_required
+  @require('Login', 'PollID', 'RunningPoll')
   def deletePoll(self):
     poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
     Session.query(Vote).filter(Vote.poll_id == poll.id).delete()
@@ -486,8 +323,8 @@ class PollController(BaseController):
     flash('success', _('Poll successfully deleted'))
     redirect(url(controller='poll', action='showAll'))
 
-  @has_params('question_id', 'poll_id')
-  @login_required
+
+  @require('Login', 'QuestionID', 'PollID', 'RunningPoll')
   def deleteQuestion(self):
     question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
     poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
@@ -499,8 +336,7 @@ class PollController(BaseController):
     redirect(url(controller='poll', action='editPoll', poll_id=request.params['poll_id']))
 
 
-  @has_params('question_id', 'anwser_id')
-  @login_required
+  @require('Login', 'QuestionID', 'AnwserID', 'RunningPoll')
   def deleteAnswer(self):
     answer = Session.query(Answer).filter(Answer.id == request.params['answer_id']).one()
     question = Session.query(Question).filter(Question.id == answer.question_id).one()
@@ -515,3 +351,175 @@ class PollController(BaseController):
     Session.commit()
     flash('success', _('Answer successfully deleted'))
     redirect(url(controller='poll', action='editQuestion', poll_id=poll_id, question_id=request.params['question_id']))
+
+
+
+
+
+
+
+
+
+#---- Validator(s) --------------------------------------------------------------------------------
+
+
+  def _validatePollID(self):
+    if not 'poll_id' in request.params:
+      raise Exception("Poll id required but not found in request")
+
+    if not re.match(r'^\d+$', request.params.get('poll_id', '')):
+      raise Exception("Poll id should be numeric")
+
+
+  def _validateQuestionID(self):
+    if not question_id in request.params:
+      raise Exception("Question id required but not found in request")
+
+    if not re.match(r'^\d+$', request.params.get('question_id', '')):
+      raise Exception("Question id should be numeric")
+
+
+  def _validateRunningPoll(self):
+    poll_id = request.params.get('poll_id', '')
+
+    try:        
+      poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == poll_id).one()
+    except:
+      # re-raise exception with custom message.
+      # exception will be catched by BaseController,
+      # see BaseController.onError for default behavior
+      raise Exception(_('Poll does not exist')) 
+
+    if len(poll.submissions) > 0 and config['debug'] != 'true':
+        raise Exception(_('Connot edit a running poll'))
+
+
+  def _validatePollParams(self):
+    # @TODO request.params may contain multiple values per key... test & fix
+    modeEdit = (request.params.get('mode', '') == 'edit')
+    errors = []
+
+    if not re.match(r'^(add|edit)$', request.params.get('mode', '')):
+      errors.append(_('Invalid form data'))
+
+    if modeEdit and not re.match(r'^\d+$', request.params.get('poll_id', '')):
+      errors.append(_('Invalid form data'))
+
+    name_len = len(request.params.get('name', ''))
+    if not modeEdit and not (name_len > 0 and name_len < 255):
+      errors.append(_('Invalid name'))
+
+    instructions_len = len(request.params.get('instructions', ''))
+    if not (instructions_len > 0 and instructions_len < 1000):
+      errors.append(_('Invalid instructions'))
+
+    if request.params.get('voters', '') == '':
+      errors.append(_('Invalid voters'))
+    else:
+      # @TODO this is not enough ... need more checks
+      voters = request.params['voters'].split('\n')
+      for v in voters:
+        if not re.match(r'\b[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}\b', v, re.I):
+          errors.append(_('Invalid voters'))
+          break
+
+    if not 'expiration_date' in request.params or not re.match(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}', request.params['expiration_date']):
+      errors.append(_('Invalid expiration date'))
+
+    if not re.match(r'^(yes|no)$', request.params.get('public', '')):
+      errors.append(_('Invalid public'))
+
+    if len(errors) > 0:
+      session['errors'] = errors
+      session['reqparams'] = {}
+      
+      # @TODO request.params may contain multiple values per key... test & fix
+      for k in request.params.iterkeys():
+        session['reqparams'][k] = request.params[k]          
+      session.save()
+      
+      if request.params['mode'] == 'add':
+        redirect(url(controller='poll', action='addPoll'))
+      else:
+        redirect(url(controller='poll', action='editPoll', poll_id=request.params['poll_id']))
+
+
+
+  def _validateQuestionParams(self):
+    # @TODO request.params may contain multiple values per key... test & fix
+    errors = []
+    modeEdit = (request.params.get('mode', '') == 'edit')
+
+    if not re.match(r'^\d+$', request.params.get('poll_id', '')):
+      errors.append(_('Invalid form data'))
+
+    if not re.match(r'^(add|edit)$', request.params.get('mode', '')):
+      errors.append(_('Invalid form data'))
+
+    if modeEdit and not re.match(r'^\d+$', request.params.get('question_id', '')):
+      errors.append(_('Invalid form data'))
+      # @TODO what do we do if no question id has been submitted but a form ?... add checks
+
+    question_len = len(request.params.get('question', ''))
+    if not (question_len > 0 and question_len < 255):
+      errors.append(_('Invalid question text'))
+
+    if not modeEdit and not re.match(r'(^text|radio|check)$', request.params.get('type', '')):
+      errors.append(_('Invalid type'))
+
+    if len(error) > 0:
+      session['errors'] = errors
+      session['reqparams'] = {}
+
+      # @TODO request.params may contain multiple values per key... test & fix
+      for k in request.params.iterkeys():
+        session['reqparams'][k] = request.params[k]
+          
+      session.save()
+      if request.params.get('mode', '') == 'edit':
+         redirect(url(controller='poll', action='editQuestion', poll_id=request.params['poll_id'], 
+                   question_id=request.params['question_id']))
+      else:
+         redirect(url(controller='poll', action='addQuestion', poll_id=request.params['poll_id']))
+
+    
+  def _validateAnswerParams(self):
+    # @TODO request.params may contain multiple values per key... test & fix
+    errors = []
+    modeEdit = (request.params.get('mode', '') == 'edit')
+
+    if not re.match(r'^\d+$', request.params.get('poll_id', '')):
+      errors.append(_('Invalid form data'))
+
+    if not re.match(r'^\d+$', request.params.get('question_id', '')):      
+      errors.append(_('Invalid form data'))
+
+    if not re.match(r'^(add|edit)$', request.params.get('mode', '')):
+      errors.append(_('Invalid form data'))
+
+    if modeEdit and not re.match(r'^\d+$', request.params.get('answer_id', '')):
+      errors.append(_('Invalid form data'))
+      # @TODO what do we do if no question id has been submitted but a form ?... add checks
+
+    answer_len = len(request.params.get('answer', ''))
+    if not (answer_len > 0 and answer_len < 255):
+      errors.append(_('Invalid answer text'))
+
+
+    if len(errors) > 0:
+      session['errors'] = errors
+      session['reqparams'] = {}
+
+      # @TODO request.params may contain multiple values per key... test & fix
+      for k in request.params.iterkeys():
+        session['reqparams'][k] = request.params[k]          
+      
+      session.save()
+
+      if request.params['mode'] == 'add':
+        redirect(url(controller='poll', action='addAnswer', poll_id=request.params['poll_id'], 
+                     question_id=request.params['question_id']))
+      else:
+        redirect(url(controller='poll', action='editAnswer', poll_id=request.params['poll_id'], 
+                     question_id=request.params['question_id'], answer_id=request.params['answer_id']))
+      
