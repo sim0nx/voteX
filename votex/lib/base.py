@@ -3,7 +3,7 @@
 Provides the BaseController class for subclassing.
 """
 
-from pylons import request, config, session
+from pylons import request, config, session, response
 from pylons.controllers import WSGIController
 from pylons.templating import render_mako as render
 from votex.model.meta import Session
@@ -22,10 +22,10 @@ def flash(klass, msg):
 
 
 def login_required(f):
-    def new_f(self, *args, **kwargs):        
+    def new_f(self):        
         if not self.uid:
             raise Exception("User is not authenticated")
-        return f(self,*args, **kwargs)
+        return f(self)
     return new_f
 
 
@@ -54,13 +54,12 @@ class BaseController(WSGIController):
         # the request is routed to. This routing information is
         # available in environ['pylons.routes_dict']
         try:
-            print "Session: ",  session
             return super(BaseController, self).__call__(environ, start_response)
-        except Exception as e:
-             log.exception('Execution of controller stopped with errors')
-             result = self.onError(e)
-             start_response('200 OK', [('Content-type', 'text/html')])
-             return result
+        except Exception as e:                       
+            log.exception('Execution of controller stopped with errors')
+            start_response('200 OK', [('Content-type', 'text/html')])
+            return self.onError(e)
+
 
     @property
     def auth(self):
@@ -77,14 +76,12 @@ class BaseController(WSGIController):
             flash('error', "Wrong credentials or user doesn't exist")
             return False
 
-        self.uid = request.params['username']
-        session['uid'] = self.uid
-        session.save()
         return True
 
 
     def onError(self, exception):
-        """This callback should be overriden in sublcass, it should render an error page"""
+        """This callback can  be overriden in sublcass, it should render an error page"""
+        flash('error', exception)
         return render('/error.mako')
 
 

@@ -5,7 +5,7 @@
 <div id="content" class="span-9 push-6 last ">
 <header style="background:#00ADEF; padding:5px; font-weight:bold; color:#fff;">${_('Login')}</header>
 	
-${base.flash()}	
+${base.all_messages()}	
 		
 <article>
 	<h3>VoteX Login</h3>

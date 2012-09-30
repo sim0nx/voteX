@@ -54,11 +54,7 @@ class VoteController(BaseController):
   def __init__(self):
     super(VoteController, self).__init__()
 
-  def index(self):
-    print "Sesson2", session
-    session['hello'] = "Hello World"
-    session.save()
-    print "Sessuion 1", session 
+  def index(self):    
     return self.vote()
 
   def vote(self):
