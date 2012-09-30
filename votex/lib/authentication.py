@@ -59,7 +59,7 @@ class Authentication:
       self.session.save()
       self.session.delete()
 
-  def initSession(self, username):        
+  def initSession(self, username):
     self.deauth()
 
     self.session['uid'] = username
