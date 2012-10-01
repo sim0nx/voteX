@@ -372,7 +372,7 @@ class PollController(BaseController):
 
 
   def _validateQuestionID(self):
-    if not question_id in request.params:
+    if not 'question_id' in request.params:
       raise Exception("Question id required but not found in request")
 
     if not re.match(r'^\d+$', request.params.get('question_id', '')):
