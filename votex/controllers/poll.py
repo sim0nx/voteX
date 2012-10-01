@@ -46,7 +46,6 @@ _ = gettext.gettext
 
 
 
-
 class PollController(BaseController):
 
   def __init__(self):
@@ -58,18 +57,15 @@ class PollController(BaseController):
       c.actions.append( (_('Show all polls'), 'poll', 'showAll') )
       c.actions.append( (_('Add poll'), 'poll', 'addPoll') )
 
-
   def login(self):
       if self.uid or self.authenticate():
           redirect(url(controller='poll', action='showAll'))
 
       return render('/login.mako')
 
-
   def logout(self):
     self.auth.deauth()
     redirect(url(controller='poll', action='login'))
-
 
   @require_login
   def showAll(self):
@@ -86,14 +82,10 @@ class PollController(BaseController):
 
     return render('/poll/showAll.mako')
 
-
-
   @require_login
   def addPoll(self):
     c.mode = 'add'
     return render('/poll/edit.mako')
-
-
 
   @require('Login', 'PollID', 'RunningPoll')
   def addQuestion(self):
@@ -104,7 +96,6 @@ class PollController(BaseController):
     c.poll = poll
 
     return render('/poll/editQuestion.mako')
-
 
   @require('Login', 'QuestionID', 'RunningPoll')
   def addAnswer(self):
@@ -118,7 +109,6 @@ class PollController(BaseController):
 
     return render('/poll/editAnswer.mako')
 
-
   @require('Login', 'PollID', 'RunningPoll')
   def editPoll(self):
     poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
@@ -128,7 +118,6 @@ class PollController(BaseController):
     c.poll = poll
 
     return render('/poll/edit.mako')
-
 
   @require('Login', 'QuestionID', 'RunningPoll')
   def editQuestion(self):
@@ -141,7 +130,6 @@ class PollController(BaseController):
     c.question = question
 
     return render('/poll/editQuestion.mako')
-
 
   @require('Login', 'AnswerID', 'RunningPoll')
   def editAnswer(self):
@@ -163,9 +151,6 @@ class PollController(BaseController):
     c.answer = answer
 
     return render('/poll/editAnswer.mako')
-    
-
-
 
   @require('POST', 'Login', 'PollParams')
   def doEditPoll(self):
@@ -215,10 +200,6 @@ class PollController(BaseController):
     Session.commit()
     flash('success', _('Poll successfully edited'))
     redirect(url(controller='poll', action='showAll'))
-
-
-
-
   
   @require('POST', 'Login', 'PollID', 'QuestionParams')
   def doEditQuestion(self):
@@ -253,8 +234,6 @@ class PollController(BaseController):
     Session.commit()
     flash('success', _('Question successfully edited'))
     redirect(url(controller='poll', action='editQuestion', poll_id=poll.id, question_id=question.id))
-    
-
 
   @require('POST', 'Login', 'QuestionID', 'PollID', 'AnswerParams')
   def doEditAnswer(self):
@@ -310,8 +289,6 @@ class PollController(BaseController):
     c.votes = votes      
     return render('/vote/showResults.mako')
 
-
-
   @require('Login', 'PollID', 'RunningPoll')
   def deletePoll(self):
     poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
@@ -323,7 +300,6 @@ class PollController(BaseController):
     flash('success', _('Poll successfully deleted'))
     redirect(url(controller='poll', action='showAll'))
 
-
   @require('Login', 'QuestionID', 'PollID', 'RunningPoll')
   def deleteQuestion(self):
     question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
@@ -334,7 +310,6 @@ class PollController(BaseController):
 
     flash('success', _('Question successfully deleted'))
     redirect(url(controller='poll', action='editPoll', poll_id=request.params['poll_id']))
-
 
   @require('Login', 'QuestionID', 'AnwserID', 'RunningPoll')
   def deleteAnswer(self):
@@ -353,13 +328,6 @@ class PollController(BaseController):
     redirect(url(controller='poll', action='editQuestion', poll_id=poll_id, question_id=request.params['question_id']))
 
 
-
-
-
-
-
-
-
 #---- Validator(s) --------------------------------------------------------------------------------
 
 
@@ -370,14 +338,12 @@ class PollController(BaseController):
     if not re.match(r'^\d+$', request.params.get('poll_id', '')):
       raise Exception("Poll id should be numeric")
 
-
   def _validateQuestionID(self):
     if not 'question_id' in request.params:
       raise Exception("Question id required but not found in request")
 
     if not re.match(r'^\d+$', request.params.get('question_id', '')):
       raise Exception("Question id should be numeric")
-
 
   def _validateRunningPoll(self):
     poll_id = request.params.get('poll_id', '')
@@ -392,7 +358,6 @@ class PollController(BaseController):
 
     if len(poll.submissions) > 0 and not config['debug']:
         raise Exception(_('Connot edit a running poll'))
-
 
   def _validatePollParams(self):
     # @TODO request.params may contain multiple values per key... test & fix
@@ -443,8 +408,6 @@ class PollController(BaseController):
       else:
         redirect(url(controller='poll', action='editPoll', poll_id=request.params['poll_id']))
 
-
-
   def _validateQuestionParams(self):
     # @TODO request.params may contain multiple values per key... test & fix
     errors = []
@@ -481,7 +444,6 @@ class PollController(BaseController):
                    question_id=request.params['question_id']))
       else:
          redirect(url(controller='poll', action='addQuestion', poll_id=request.params['poll_id']))
-
     
   def _validateAnswerParams(self):
     # @TODO request.params may contain multiple values per key... test & fix
@@ -504,7 +466,6 @@ class PollController(BaseController):
     answer_len = len(request.params.get('answer', ''))
     if not (answer_len > 0 and answer_len < 255):
       errors.append(_('Invalid answer text'))
-
 
     if len(errors) > 0:
       session['errors'] = errors
