@@ -378,15 +378,16 @@ class PollController(BaseController):
     if not (instructions_len > 0 and instructions_len < 1000):
       errors.append(_('Invalid instructions'))
 
-    if request.params.get('voters', '') == '':
-      errors.append(_('Invalid voters'))
-    else:
-      # @TODO this is not enough ... need more checks
-      voters = request.params['voters'].split('\n')
-      for v in voters:
-        if not re.match(r'\b[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}\b', v, re.I):
-          errors.append(_('Invalid voters'))
-          break
+    if not config['debug']:
+      if request.params.get('voters', '') == '':
+        errors.append(_('Invalid voters'))
+      else:
+        # @TODO this is not enough ... need more checks
+        voters = request.params['voters'].split('\n')
+        for v in voters:
+          if not re.match(r'\b[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}\b', v, re.I):
+            errors.append(_('Invalid voters'))
+            break
 
     if not 'expiration_date' in request.params or not re.match(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}', request.params['expiration_date']):
       errors.append(_('Invalid expiration date'))
