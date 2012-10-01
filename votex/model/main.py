@@ -97,3 +97,12 @@ class Submission(Base):
   def __str(self):
     return "<Vote id=%s, poll_id=%s, update_date=%s, key=%s, simple_vote=%s, complex_vote=%s>" %\
       (self.id, self.poll_id, self.update_date, self.key, self.simple_vote, self.complex_vote)
+
+class Login(Base):
+  __tablename__ = 'login'
+
+  id = Column(Integer, primary_key=True)
+  username = Column(String(64))
+  password = Column(String(255))
+  email = Column(String(255))
+  last_login  = Column(DateTime)
