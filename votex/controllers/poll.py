@@ -467,7 +467,7 @@ class PollController(BaseController):
     if not modeEdit and not re.match(r'(^text|radio|check)$', request.params.get('type', '')):
       errors.append(_('Invalid type'))
 
-    if len(error) > 0:
+    if len(errors) > 0:
       session['errors'] = errors
       session['reqparams'] = {}
 
