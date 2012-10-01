@@ -43,11 +43,11 @@ class require:
     def __call__(self, f):
         def wrapped_f(this, *args, **kwargs):
             for k in self.validators:
-                func = getattr(this, "_validate{}".format(k))
+                func = getattr(this, "_validate{0}".format(k))
                 if func:
                     func()
                 else:
-                    raise Exception('Validator {} not found.'.format(k))
+                    raise Exception('Validator {0} not found.'.format(k))
             return f(this)
         return wrapped_f
 

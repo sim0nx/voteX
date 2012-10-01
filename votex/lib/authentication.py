@@ -28,7 +28,7 @@ class Authentication:
     """
     # sanity checks before calling backend
     if not (len(username) > 0 and len(username) < 64 and len(password) > 0 and len(password) < 64):
-      log.debug("Username or password doesn't pass minimum requirements for user: {}".format(username))
+      log.debug("Username or password doesn't pass minimum requirements for user: {0}".format(username))
       return False
 
 
@@ -39,15 +39,15 @@ class Authentication:
     try:
       is_authenticated = self.__authenticator(username, password)
     except Exception as e:
-      log.debug("Authentication backend raised an exception: {}".format(str(e)))
+      log.debug("Authentication backend raised an exception: {0}".format(str(e)))
 
     if is_authenticated:
       self.initSession(username)
-      log.debug("User authenticated: {}".format(username))
+      log.debug("User authenticated: {0}".format(username))
       return True
 
     else:
-      log.debug("Couldn't authenticate user: {}".format(username))
+      log.debug("Couldn't authenticate user: {0}".format(username))
       return False
     
 
