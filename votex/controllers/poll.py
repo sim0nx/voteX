@@ -390,7 +390,7 @@ class PollController(BaseController):
       # see BaseController.onError for default behavior
       raise Exception(_('Poll does not exist')) 
 
-    if len(poll.submissions) > 0 and config['debug'] != 'true':
+    if len(poll.submissions) > 0 and not config['debug']:
         raise Exception(_('Connot edit a running poll'))
 
 
