@@ -1,11 +1,8 @@
 from votex.lib.ldapConnector import LdapConnector
 
 
-
-
 class LDAPAuthBackend:
   """Authenticate the user against LDAP.
-
 
   Settings:
 
