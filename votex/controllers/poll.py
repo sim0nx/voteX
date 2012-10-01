@@ -130,7 +130,7 @@ class PollController(BaseController):
     return render('/poll/edit.mako')
 
 
-  @require('Login', 'QuestionId', 'RunningPoll')
+  @require('Login', 'QuestionID', 'RunningPoll')
   def editQuestion(self):
     question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
     poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == question.poll_id).one()
