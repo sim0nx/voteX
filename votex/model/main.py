@@ -25,12 +25,13 @@ from votex.model.meta import Base
 class Poll(Base):
   __tablename__ = 'poll'
 
-  id      = Column(Integer, primary_key=True)
-  name      = Column(String(255))
-  owner     = Column(String(64))
-  instructions    = Column(Text)
-  expiration_date   = Column(DateTime)
-  public      = Column(Boolean)
+  id = Column(Integer, primary_key=True)
+  name = Column(String(255))
+  owner = Column(String(64))
+  instructions = Column(Text)
+  running = Column(Integer)
+  expiration_date = Column(DateTime)
+  public = Column(Boolean)
 
   questions = relationship('Question')
   participants = relationship('Participant')
@@ -73,6 +74,7 @@ class Participant(Base):
 
   id = Column(Integer, primary_key=True)
   poll_id = Column(Integer, ForeignKey('poll.id'), index=True)
+  participant = Column(String(255))
   key = Column(String(64))
   update_date = Column(DateTime)
 
