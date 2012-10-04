@@ -20,7 +20,7 @@ def flash(klass, msg):
     session.save()
 
 
-class require:
+class require(object):
     """Search and execute a validator method
 
     A validator method should check for a requried condition. If the condition 
