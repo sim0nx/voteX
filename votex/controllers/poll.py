@@ -162,6 +162,7 @@ class PollController(BaseController):
     poll.public = (request.params['public'] == 'yes')
     poll.owner = self.uid
     poll.name = request.params['name'].encode('utf8')
+    poll.running = 0
     poll.instructions = str(request.params['instructions'].encode('utf-8'))
     poll.expiration_date = request.params['expiration_date']
       
@@ -356,8 +357,8 @@ class PollController(BaseController):
       # see BaseController.onError for default behavior
       raise Exception(_('Poll does not exist')) 
 
-    if len(poll.submissions) > 0 and not config['debug']:
-        raise Exception(_('Connot edit a running poll'))
+    if poll.running > 0 and not config['debug']:
+      raise Exception(_('Connot edit a running poll'))
 
   def _validatePollParams(self):
     # @TODO request.params may contain multiple values per key... test & fix
