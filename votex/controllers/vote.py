@@ -25,7 +25,7 @@ from pylons import request, response, session, tmpl_context as c, url
 from pylons.controllers.util import redirect
 from pylons import config
 
-from votex.lib.base import BaseController, render, Session
+from votex.lib.base import BaseController, render, Session, flash, require
 from votex.model.main import Poll, Question, Answer, Participant, Submission
 
 log = logging.getLogger(__name__)
@@ -64,9 +64,7 @@ class VoteController(BaseController):
         poll = Session.query(Poll).filter(Poll.id == participant.poll_id).one()
 
         if datetime.now() > poll.expiration_date:
-          session['flash'] = _('Sorry, poll has expired')
-          session['flash_class'] = 'error'
-          session.save()
+          flash('error', _('Sorry, poll has expired'))
           redirect(url(controller='vote', action='vote'))
 
         if participant.update_date is None:
@@ -81,125 +79,108 @@ class VoteController(BaseController):
 
     return render('/vote/vote.mako')
 
+  @require('VoteKey')
   def doVote(self):
-    if not 'vote_key' in request.params or request.params['vote_key'] == '':
+    participant = Session.query(Participant).filter(Participant.key == request.params['vote_key']).one()
+    poll = Session.query(Poll).filter(Poll.id == participant.poll_id).one()
+
+    if not participant.update_date is None:
+      flash('error', _('Sorry, your vote has already been submitted'))
       redirect(url(controller='vote', action='vote'))
-    else:
-      try:
-        participant = Session.query(Participant).filter(Participant.key == request.params['vote_key']).one()
-        poll = Session.query(Poll).filter(Poll.id == participant.poll_id).one()
 
-        if not participant.update_date is None:
-          session['flash'] = _('Sorry, your vote has already been submitted')
-          session['flash_class'] = 'error'
-          session.save()
-          redirect(url(controller='vote', action='vote'))
+    if datetime.now() > poll.expiration_date:
+      flash('error', _('Sorry, poll has expired'))
+      redirect(url(controller='vote', action='vote'))
 
-        if datetime.now() > poll.expiration_date:
-          session['flash'] = _('Sorry, poll has expired')
-          session['flash_class'] = 'error'
-          session.save()
-          redirect(url(controller='vote', action='vote'))
+    for k in request.params:
+      if 'question' in k:
+        m = re.match(r'question_(t|r|c)_(\d+)(?:_(\d+))?', k)
+        if m and len(m.groups()) == 3:
+          if m.group(1) == 't':
+            q = Session.query(Question).filter(and_(Question.id == m.group(2), Question.poll_id == poll.id)).one()
+            a = Session.query(Answer).filter(and_(Answer.id == m.group(3), Answer.question_id == q.id)).one()
 
-        for k in request.params:
-          if 'question' in k:
-            m = re.match(r'question_(t|r|c)_(\d+)(?:_(\d+))?', k)
-            if m and len(m.groups()) == 3:
-              if m.group(1) == 't':
-                q = Session.query(Question).filter(and_(Question.id == m.group(2), Question.poll_id == poll.id)).one()
-                a = Session.query(Answer).filter(and_(Answer.id == m.group(3), Answer.question_id == q.id)).one()
+            s = Submission()
+            s.poll_id = poll.id
+            s.question_id = q.id
+            s.answer_id = a.id
+            s.participant_id = participant.id
+            s.update_date = datetime.now()
+            s.answer_text = request.params[k]
 
-                s = Submission()
-                s.poll_id = poll.id
-                s.question_id = q.id
-                s.answer_id = a.id
-                s.participant_id = participant.id
-                s.update_date = datetime.now()
-                s.answer_text = request.params[k]
+            Session.add(s)
+          elif m.group(1) == 'r':
+            q = Session.query(Question).filter(and_(Question.id == m.group(2), Question.poll_id == poll.id)).one()
+            a = Session.query(Answer).filter(and_(Answer.id == m.group(3), Answer.question_id == q.id)).one()
 
-                Session.add(s)
-              elif m.group(1) == 'r':
-                q = Session.query(Question).filter(and_(Question.id == m.group(2), Question.poll_id == poll.id)).one()
-                a = Session.query(Answer).filter(and_(Answer.id == m.group(3), Answer.question_id == q.id)).one()
+            s = Submission()
+            s.poll_id = poll.id
+            s.question_id = q.id
+            s.answer_id = a.id
+            s.participant_id = participant.id
+            s.update_date = datetime.now()
+            s.answer_bool = 1
 
-                s = Submission()
-                s.poll_id = poll.id
-                s.question_id = q.id
-                s.answer_id = a.id
-                s.participant_id = participant.id
-                s.update_date = datetime.now()
-                s.answer_bool = 1
+            Session.add(s)
+          elif m.group(1) == 'c':
+            q = Session.query(Question).filter(and_(Question.id == m.group(2), Question.poll_id == poll.id)).one()
+            a = Session.query(Answer).filter(and_(Answer.id == m.group(3), Answer.question_id == q.id)).one()
 
-                Session.add(s)
-              elif m.group(1) == 'c':
-                q = Session.query(Question).filter(and_(Question.id == m.group(2), Question.poll_id == poll.id)).one()
-                a = Session.query(Answer).filter(and_(Answer.id == m.group(3), Answer.question_id == q.id)).one()
+            s = Submission()
+            s.poll_id = poll.id
+            s.question_id = q.id
+            s.answer_id = a.id
+            s.participant_id = participant.id
+            s.update_date = datetime.now()
+            s.answer_bool = 1
 
-                s = Submission()
-                s.poll_id = poll.id
-                s.question_id = q.id
-                s.answer_id = a.id
-                s.participant_id = participant.id
-                s.update_date = datetime.now()
-                s.answer_bool = 1
+            Session.add(s)
 
-                Session.add(s)
+    #participant.update_date = datetime.now()
+    Session.commit()
 
-        #participant.update_date = datetime.now()
-        Session.commit()
-
-        session['flash'] = _('Vote successfully saved')
-        session.save()
-      except Exception as e:
-        print e
-        session['flash'] = _('Failed to save vote')
-        session['flash_class'] = 'error'
-        session.save()
-        pass
-
+    flash('success', _('Vote successfully saved'))
     redirect(url(controller='vote', action='vote'))
 
+  @require('VoteKey')
   def results(self):
+    participant = Session.query(Participant).filter(Participant.key == request.params['vote_key']).one()
+    poll = Session.query(Poll).filter(Poll.id == participant.poll_id).one()
+
+    if participant.update_date is None:
+      flash('error', _('Vote first'))
+      #redirect(url(controller='vote', action='vote'))
+
+    c.poll = poll
+    submissions = {}
+
+    for q in poll.questions:
+      if not q.type == 1:
+        for a in q.answers:
+          i = Session.query(Submission).filter(Submission.answer_id == a.id).count()
+          submissions[a.id] = i
+      else:
+        for a in q.answers:
+          all_a = Session.query(Submission).filter(Submission.answer_id == a.id).all()
+          for s_a in all_a:
+            if a.id in submissions:
+              submissions[a.id].append(s_a.answer_text)
+            else:
+              submissions[a.id] = []
+              submissions[a.id].append(s_a.answer_text)
+
+    c.submissions = submissions
+
+    return render('/vote/showResults.mako')
+
+
+#---- Validator(s) --------------------------------------------------------------------------------
+
+
+  def _validateVoteKey(self):
     if not 'vote_key' in request.params or request.params['vote_key'] == '':
-      print 'Session in Vote:', session
-      return render('/vote/results.mako')
-    else:
-      try:
-        participant = Session.query(Participant).filter(Participant.key == request.params['vote_key']).one()
-        poll = Session.query(Poll).filter(Poll.id == participant.poll_id).one()
+      raise Exception("Vote key is required but not found in request")
 
-        if participant.update_date is None:
-          session['flash'] = _('Vote first')
-          session['flash_class'] = 'error'
-          session.save()
-          #redirect(url(controller='vote', action='vote'))
+    if not re.match(r'^[\w\d]+$', request.params.get('vote_key', '')):
+      raise Exception('Invalid vote key')
 
-        c.poll = poll
-        submissions = {}
-
-        for q in poll.questions:
-          if not q.type == 1:
-            for a in q.answers:
-              i = Session.query(Submission).filter(Submission.answer_id == a.id).count()
-              submissions[a.id] = i
-          else:
-            for a in q.answers:
-              all_a = Session.query(Submission).filter(Submission.answer_id == a.id).all()
-              for s_a in all_a:
-                if a.id in submissions:
-                  submissions[a.id].append(s_a.answer_text)
-                else:
-                  submissions[a.id] = []
-                  submissions[a.id].append(s_a.answer_text)
-
-        c.submissions = submissions
-
-        return render('/vote/showResults.mako')
-      except NoResultFound:
-        redirect(url(controller='vote', action='vote'))
-      except Exception as e:
-        import sys, traceback
-        traceback.print_exc(file=sys.stdout)
-        redirect(url(controller='vote', action='vote'))
-
-      return render('/vote/results.mako')
