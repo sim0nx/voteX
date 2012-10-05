@@ -1,5 +1,4 @@
 Pluggable auth backends:
-* SQL
 * http-basic
 * OAuth
 
