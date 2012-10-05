@@ -52,14 +52,17 @@ if c.mode == 'edit':
 		</td>
        	</tr>
 	<tr>
-                <td class="table_title">
-                        ${_('Voters (separate by new-line)')}
-                </td>
+    <td class="table_title">
+      ${_('Participants')}
+    </td>
 		<td>
-			% if c.mode is 'add':
-			<textarea rows='10' cols='60' name="voters">${getFormVar(session, c, 'voters')}</textarea>
-			% else:
-			<textarea rows='10' cols='60' name="voters" disabled>${getFormVar(session, c, 'voters')}</textarea>
+			% if c.mode == 'edit':
+      <a href="${url(controller='poll', action='editParticipant', poll_id=c.poll.id)}">Edit participants</a><br/>
+      % if len(c.poll.participants) > 0:
+      % for k in c.poll.participants:
+      ${k.participant}<br/>
+      % endfor
+      % endif
 			% endif
 		</td>
        	</tr>
