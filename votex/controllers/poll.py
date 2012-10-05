@@ -119,6 +119,16 @@ class PollController(BaseController):
 
     return render('/poll/edit.mako')
 
+  @require('Login', 'PollID', 'RunningPoll')
+  def editParticipant(self):
+    poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+
+    c.heading = _('Edit participant')
+    c.mode = 'edit'
+    c.poll = poll
+
+    return render('/poll/editParticipant.mako')
+
   @require('Login', 'QuestionID', 'RunningPoll')
   def editQuestion(self):
     question = Session.query(Question).filter(Question.id == request.params['question_id']).one()
@@ -192,9 +202,11 @@ class PollController(BaseController):
       msg['From'] = 'noreply@hackerspace.lu'
       msg['To'] = v
 
+      '''
       s = smtplib.SMTP('localhost')
       s.sendmail(msg['From'], v, msg.as_string())
       s.quit()
+      '''
 
       Session.add(p)
 
@@ -202,6 +214,24 @@ class PollController(BaseController):
     flash('success', _('Poll successfully edited'))
     redirect(url(controller='poll', action='showAll'))
   
+  @require('POST', 'Login', 'PollID', 'ParticipantParams')
+  def doEditParticipant(self):
+    poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
+    Session.query(Participant).filter(Participant.poll_id == poll.id).delete()
+    Session.flush()
+
+    voters = request.params['participants'].split('\n')
+    for v in voters:
+      p = Participant()
+      p.poll_id = poll.id
+      p.participant = v
+      p.key = ''
+      Session.add(p)
+
+    Session.commit()
+    flash('success', _('Participants successfully edited'))
+    redirect(url(controller='poll', action='editPoll', poll_id=poll.id))
+
   @require('POST', 'Login', 'PollID', 'QuestionParams')
   def doEditQuestion(self):
     if request.params['mode'] == 'edit':
@@ -409,6 +439,30 @@ class PollController(BaseController):
         redirect(url(controller='poll', action='addPoll'))
       else:
         redirect(url(controller='poll', action='editPoll', poll_id=request.params['poll_id']))
+
+  def _validateParticipantParams(self):
+    errors = []
+
+    if request.params.get('participants', '') == '':
+      errors.append(_('Invalid participants'))
+    else:
+      # @TODO this is not enough ... need more checks
+      voters = request.params['participants'].split('\n')
+      for v in voters:
+        if not re.match(r'\b[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}\b', v, re.I):
+          errors.append(_('Invalid participants'))
+          break
+
+    if len(errors) > 0:
+      session['errors'] = errors
+      session['reqparams'] = {}
+      
+      # @TODO request.params may contain multiple values per key... test & fix
+      for k in request.params.iterkeys():
+        session['reqparams'][k] = request.params[k]          
+      session.save()
+      
+      redirect(url(controller='poll', action='editParticipant', poll_id=request.params['poll_id']))
 
   def _validateQuestionParams(self):
     # @TODO request.params may contain multiple values per key... test & fix
