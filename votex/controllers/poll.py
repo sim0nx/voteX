@@ -58,10 +58,10 @@ class PollController(BaseController):
       c.actions.append( (_('Add poll'), 'poll', 'addPoll') )
 
   def login(self):
-      if self.uid or self.authenticate():
-          redirect(url(controller='poll', action='showAll'))
+    if self.uid or self.authenticate():
+      redirect(url(controller='poll', action='showAll'))
 
-      return render('/login.mako')
+    return render('/login.mako')
 
   def logout(self):
     self.auth.deauth()

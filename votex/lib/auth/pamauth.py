@@ -15,4 +15,4 @@ class PAMAuthBackend:
     auth.class = PAMAuthBackend
     """
     def __call__(self, username, password):
-        return pam.authenticate(username, password,service="votex")
+        return pam.authenticate(username, password, service="votex")
