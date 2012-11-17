@@ -339,10 +339,16 @@ class PollController(BaseController):
 
   @require('Login', 'PollID', 'RunningPoll')
   def deletePoll(self):
-    poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
-    Session.query(Vote).filter(Vote.poll_id == poll.id).delete()
+    poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params.get('poll_id')).one()
 
+    for o in Session.query(Question).filter(Question.poll_id == poll.id):
+      Session.query(Answer).filter(Answer.question_id == o.id).delete()
+      Session.delete(o)
+
+    Session.query(Participant).filter(Participant.poll_id == poll.id).delete()
+    Session.query(Submission).filter(Submission.poll_id == poll.id).delete()
     Session.delete(poll)
+
     Session.commit()
 
     flash('success', _('Poll successfully deleted'))
