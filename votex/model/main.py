@@ -38,8 +38,8 @@ class Poll(Base):
   submissions = relationship('Submission')
 
   def __str__(self):
-    return "<Poll id=%s, name=%s, owner=%s, instructions=%s, expiration_date=%s, type=%s, public=%s>>" %\
-      (self.id, self.name, self.owner, self.instructions, self.expiration_date, self.type, self.public)
+    return "<Poll id=%s, name=%s, owner=%s, instructions=%s, expiration_date=%s, public=%s>>" %\
+      (self.id, self.name, self.owner, self.instructions, self.expiration_date, self.public)
 
 class Question(Base):
   __tablename__ = 'question'

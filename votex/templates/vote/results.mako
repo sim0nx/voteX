@@ -6,7 +6,7 @@
 				
 <article>
 	<h3>VoteX</h3>
-	${h.form(url(controller='vote', action='results'), method='post')}
+	${h.form(url(controller='vote', action='showResults'), method='post')}
      	<div><input type="text" class="text" name="vote_key" tabindex=1 required /></div> 
 	<div><input type="submit" class="text" name="submit" tabindex=2 value="${_('Go')}" /></div>
 	</form> 

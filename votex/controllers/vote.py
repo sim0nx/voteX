@@ -58,7 +58,7 @@ class VoteController(BaseController):
     return self.vote()
 
   def vote(self):
-    if 'vote_key' in request.params and not request.params['vote_key'] == '':
+    if not request.params.get('vote_key', '') == '':
       try:
         participant = Session.query(Participant).filter(Participant.key == request.params['vote_key']).one()
         poll = Session.query(Poll).filter(Poll.id == participant.poll_id).one()
@@ -142,8 +142,11 @@ class VoteController(BaseController):
     flash('success', _('Vote successfully saved'))
     redirect(url(controller='vote', action='vote'))
 
-  @require('VoteKey')
   def results(self):
+    return render('/vote/results.mako')
+
+  @require('VoteKey')
+  def showResults(self):
     participant = Session.query(Participant).filter(Participant.key == request.params['vote_key']).one()
     poll = Session.query(Poll).filter(Poll.id == participant.poll_id).one()
 

@@ -12,7 +12,7 @@ CREATE TABLE "participant" (
   "poll_id" INTEGER NOT NULL,
   "participant" VARCHAR NOT NULL,
   "key" VARCHAR NOT NULL,
-  "update_date" DATETIME NOT NULL
+  "update_date" DATETIME
 );
 
 CREATE TABLE "poll" (
@@ -39,9 +39,9 @@ CREATE TABLE "submission" (
   "question_id" INTEGER NOT NULL,
   "participant_id" INTEGER NOT NULL,
   "answer_id" INTEGER NOT NULL,
-  "update_date" DATETIME NOT NULL,
-  "answer_text" TEXT NOT NULL,
-  "answer_bool" INTEGER NOT NULL
+  "update_date" DATETIME,
+  "answer_text" TEXT,
+  "answer_bool" INTEGER
 );
 
 CREATE TABLE "login" (
