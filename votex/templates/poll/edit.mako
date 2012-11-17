@@ -32,9 +32,9 @@ if c.mode == 'edit':
 <table class="table_content">
 	${parent.all_messages()}
   <tr>
-                <td class="table_title">
-                        ${_('Name')}
-                </td>
+    <td class="table_title">
+      ${_('Name')}
+    </td>
 		<td>
 			% if c.mode is 'add':
 			<input type="text" name="name" value="${getFormVar(session, c, 'name')}" class="input text">
@@ -44,13 +44,13 @@ if c.mode == 'edit':
 		</td>
 	</tr>
 	<tr>
-                <td class="table_title">
-                        ${_('Instructions')}
-                </td>
+    <td class="table_title">
+      ${_('Instructions')}
+    </td>
 		<td>
 			<textarea rows='10' cols='60' name="instructions">${getFormVar(session, c, 'instructions')}</textarea>
 		</td>
-       	</tr>
+ 	</tr>
 	<tr>
     <td class="table_title">
       ${_('Participants')}
@@ -65,33 +65,31 @@ if c.mode == 'edit':
       % endif
 			% endif
 		</td>
-       	</tr>
-        <tr>
-                <td class="table_title">
-                        ${_('Expiration Date')} (YYYY-MM-DD HH:MM)
-                </td>
-                <td>
-                        <input type="text" name="expiration_date" value="${getFormVar(session, c, 'expiration_date')}" class="input text">
-                </td>
-        </tr>
-        <tr>
-                <td class="table_title">
-                        ${_('Public')}
-                </td>
-                <td>
-			<input type="radio" name="public" value="yes" ${public_yes}>Yes<br/>
-       			<input type="radio" name="public" value="no" ${public_no}>No<br/>
-                </td>
-        </tr>
+  </tr>
+  <tr>
+    <td class="table_title">
+      ${_('Expiration Date')} (YYYY-MM-DD HH:MM:SS)
+    </td>
+    <td>
+      <input type="text" name="expiration_date" value="${getFormVar(session, c, 'expiration_date')}" class="input text">
+    </td>
+  </tr>
+  <tr>
+    <td class="table_title">
+      ${_('Public')}
+    </td>
+    <td>
+      <input type="radio" name="public" value="yes" ${public_yes}>Yes<br/>
+      <input type="radio" name="public" value="no" ${public_no}>No<br/>
+    </td>
+  </tr>
 </table>
 <input type="hidden" name="mode" value="${c.mode}">
 % if c.mode is 'edit':
 <input type="hidden" name="poll_id" value="${c.poll.id}">
 % endif
 <input type="submit" name="" value="${_('Submit')}" class="input button right"> 
-
 </form>
-
 
 % if c.mode is 'edit':
 Questions:
