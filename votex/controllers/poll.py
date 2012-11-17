@@ -40,6 +40,7 @@ from email.mime.text import MIMEText
 
 import random
 import string
+from datetime import datetime
 
 import gettext
 _ = gettext.gettext
@@ -164,22 +165,35 @@ class PollController(BaseController):
 
   @require('POST', 'Login', 'PollParams')
   def doEditPoll(self):
-    if request.params['mode'] == 'edit':
+    modeEdit = (request.params.get('mode', '') == 'edit')
+
+    if modeEdit:
       poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
     else:
       poll = Poll()
 
     poll.public = (request.params['public'] == 'yes')
     poll.owner = self.uid
-    poll.name = request.params['name'].encode('utf8')
+
+    if not modeEdit:
+      poll.name = request.params['name'].encode('utf8')
+
     poll.running = 0
     poll.instructions = str(request.params['instructions'].encode('utf-8'))
-    poll.expiration_date = request.params['expiration_date']
+    poll.expiration_date = datetime.strptime(request.params['expiration_date'], '%Y-%m-%d %H:%M:%S')
       
-    if request.params['mode'] == 'add':
+    if not modeEdit:
       Session.add(poll)
       Session.flush()
 
+    #for v in list(set(request.params['voters'].split('\n'))):
+    #  self._sendMail(v, poll)
+
+    Session.commit()
+    flash('success', _('Poll successfully edited'))
+    redirect(url(controller='poll', action='showAll'))
+
+  def _sendMail(self, email, poll):
     mailtext = '''\
         Hey,
 
@@ -192,27 +206,24 @@ class PollController(BaseController):
         The poll expires on %s
         '''
 
-    for v in list(set(request.params['voters'].split('\n'))):
-      p = Participant()
-      p.poll_id = poll.id
-      p.key = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(20))
+    p = Participant()
+    p.poll_id = poll.id
+    p.key = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(20))
 
-      msg = MIMEText(mailtext % (poll.name, p.key, p.key, poll.expiration_date), 'plain')
-      msg['Subject'] = 'syn2cat - We need you to vote'
-      msg['From'] = 'noreply@hackerspace.lu'
-      msg['To'] = v
+    msg = MIMEText(mailtext % (poll.name, p.key, p.key, poll.expiration_date), 'plain')
+    msg['Subject'] = 'syn2cat - We need you to vote'
+    msg['From'] = 'noreply@hackerspace.lu'
+    msg['To'] = email
 
-      '''
-      s = smtplib.SMTP('localhost')
-      s.sendmail(msg['From'], v, msg.as_string())
-      s.quit()
-      '''
+    '''
+    s = smtplib.SMTP('localhost')
+    s.sendmail(msg['From'], v, msg.as_string())
+    s.quit()
+    '''
 
-      Session.add(p)
+    Session.add(p)
+    Session.flush()
 
-    Session.commit()
-    flash('success', _('Poll successfully edited'))
-    redirect(url(controller='poll', action='showAll'))
   
   @require('POST', 'Login', 'PollID', 'ParticipantParams')
   def doEditParticipant(self):
@@ -220,12 +231,18 @@ class PollController(BaseController):
     Session.query(Participant).filter(Participant.poll_id == poll.id).delete()
     Session.flush()
 
-    voters = request.params['participants'].split('\n')
+    voters = request.params['participants'].replace('\r', '').split('\n')
+    voters = list(set(voters))
+
     for v in voters:
+      if v == '':
+        continue
+
       p = Participant()
       p.poll_id = poll.id
       p.participant = v
       p.key = ''
+      p.update_date = datetime.now()
       Session.add(p)
 
     Session.commit()
@@ -376,6 +393,13 @@ class PollController(BaseController):
     if not re.match(r'^\d+$', request.params.get('question_id', '')):
       raise Exception("Question id should be numeric")
 
+  def _validateAnswerID(self):
+    if not 'answer_id' in request.params:
+      raise Exception("Answer id required but not found in request")
+
+    if not re.match(r'^\d+$', request.params.get('answer_id', '')):
+      raise Exception("Answer id should be numeric")
+
   def _validateRunningPoll(self):
     poll_id = request.params.get('poll_id', '')
 
@@ -447,9 +471,9 @@ class PollController(BaseController):
       errors.append(_('Invalid participants'))
     else:
       # @TODO this is not enough ... need more checks
-      voters = request.params['participants'].split('\n')
+      voters = request.params['participants'].replace('\r', '').split('\n')
       for v in voters:
-        if not re.match(r'\b[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}\b', v, re.I):
+        if not (v == '' or re.match(r'\b[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}\b', v, re.I)):
           errors.append(_('Invalid participants'))
           break
 

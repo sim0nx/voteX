@@ -75,4 +75,3 @@ CREATE TABLE "submission" (
   "answer_bool" smallint DEFAULT NULL,
   PRIMARY KEY ("id")
 );
-
