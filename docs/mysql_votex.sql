@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS `participant` (
   `poll_id` bigint(20) unsigned NOT NULL,
   `key` varchar(64) CHARACTER SET ascii NOT NULL,
   `update_date` datetime DEFAULT NULL,
+  `mail_sent` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 ;
 
@@ -59,6 +60,7 @@ CREATE TABLE IF NOT EXISTS `poll` (
   `instructions` mediumtext NOT NULL,
   `expiration_date` datetime NOT NULL,
   `public` tinyint(1) NOT NULL,
+  `running` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 ;
 
@@ -73,7 +75,7 @@ CREATE TABLE IF NOT EXISTS `question` (
   `poll_id` bigint(20) unsigned NOT NULL,
   `question` varchar(255) NOT NULL,
   `type` tinyint(4) NOT NULL,
-  `mandatory` tinyint(4) NOT NULL,
+  `mandatory` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 ;
 
@@ -107,6 +109,6 @@ CREATE TABLE IF NOT EXISTS `submission` (
   `answer_id` bigint(20) unsigned NOT NULL,
   `update_date` datetime DEFAULT NULL,
   `answer_text` text,
-  `answer_bool` tinyint(4) DEFAULT NULL,
+  `answer_bool` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 ;

@@ -12,7 +12,8 @@ CREATE TABLE "participant" (
   "poll_id" INTEGER NOT NULL,
   "participant" VARCHAR NOT NULL,
   "key" VARCHAR NOT NULL,
-  "update_date" DATETIME
+  "update_date" DATETIME,
+  "mail_sent" BOOL NOT NULL DEFAULT 0
 );
 
 CREATE TABLE "poll" (

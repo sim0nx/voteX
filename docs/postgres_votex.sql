@@ -20,6 +20,7 @@ CREATE TABLE "participant" (
   "poll_id" bigint NOT NULL,
   "key" character varying(64) NOT NULL,
   "update_date" timestamp DEFAULT NULL,
+  "mail_sent" smallint NOT NULL DEFAULT 0,
   PRIMARY KEY ("id")
 );
 
@@ -33,6 +34,7 @@ CREATE TABLE "poll" (
   "instructions" text NOT NULL,
   "expiration_date" timestamp NOT NULL,
   "public" smallint NOT NULL,
+  "running" smallint NOT NULL,
   PRIMARY KEY ("id")
 );
 
