@@ -18,33 +18,30 @@ else:
       participants += k.participant
 %>
 
-<form method="post" action="${url(controller='poll', action='doEditParticipant')}" name="recordform">
-
-<div id="content" class="span-18 push-1 last ">
-<header style="background:#00ADEF; padding:5px; font-weight:bold; color:#fff;">${_('Edit participants')}</header>
-<article>
+<h3>${c.heading}</h3>
+${parent.flash()}
 <a href="${url(controller='poll', action='editPoll', poll_id=c.poll.id)}">Back to poll</a>
 
-<table class="table_content">
-  ${parent.all_messages()}
-  <tr>
-    <td class="table_title">
-      ${_('Participants (separate by new-line)')}
-   </td>
-    <td>
-      <textarea rows='10' cols='60' name="participants">${participants}</textarea>
-    </td>
-  </tr>
-</table>
+<form method="post" action="${url(controller='poll', action='doEditParticipant')}" name="recordform" class="form-horizontal">
 
-<input type="hidden" name="mode" value="${c.mode}">
-<input type="hidden" name="poll_id" value="${c.poll.id}">
-<input type="submit" name="" value="${_('Submit')}" class="input button right"> 
+  <div class="control-group">
+    <label class="control-label">${_('Participants (separate by new-line)')}</label>
+    <div class="controls">
+      <textarea rows='10' cols='60' name="participants">${participants}</textarea>
+    </div>
+  </div>
+
+  <input type="hidden" name="mode" value="${c.mode}">
+  <input type="hidden" name="poll_id" value="${c.poll.id}">
+
+  <div class="control-group">
+    <div class="controls">
+      <button type="submit" class="btn">${_('Submit')}</button>
+    </div>
+  </div>
 </form>
 
-</article>
 <div id="make-space" class="prepend-top">&nbsp;</div>
-</div>
 
 <%
 if 'reqparams' in session:

@@ -43,68 +43,67 @@ else:
 
 %>
 
-<form method="post" action="${url(controller='poll', action='doEditQuestion')}" name="recordform">
-
-<div id="content" class="span-18 push-1 last ">
-<header style="background:#00ADEF; padding:5px; font-weight:bold; color:#fff;">${_('Add question')}</header>
-<article>
+<h3>${c.heading}</h3>
+${parent.flash()}
 <a href="${url(controller='poll', action='editPoll', poll_id=c.poll.id)}">Back to poll</a>
 
-<table class="table_content">
-  ${parent.all_messages()}
-  <tr>
-    <td class="table_title">
-      ${_('Question')}
-   </td>
-    <td>
+<form method="post" action="${url(controller='poll', action='doEditQuestion')}" name="recordform" class="form-horizontal">
+
+  <div class="control-group">
+    <label class="control-label">${_('Question')}</label>
+    <div class="controls">
       <textarea rows='10' cols='60' name="question">${getFormVar(session, c, 'question')}</textarea>
-    </td>
-  </tr>
-  <tr>
-    <td class="table_title">
-      ${_('Type')}
-    </td>
-    <td>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label">${_('Type')}</label>
+    <div class="controls">
       <input type="radio" name="type" value="text" ${type_text} ${type_disabled}>${_('free text')}<br/>
       <input type="radio" name="type" value="radio" ${type_radio} ${type_disabled}>${_('single choice')}<br/>
       <input type="radio" name="type" value="check" ${type_check} ${type_disabled}>${_('multiple choice')}<br/>
-    </td>
-  </tr>
-</table>
+    </div>
+  </div>
 
-<input type="hidden" name="mode" value="${c.mode}">
-<input type="hidden" name="poll_id" value="${c.poll.id}">
-% if c.mode is 'edit':
-<input type="hidden" name="question_id" value="${c.question.id}">
-% endif
-<input type="submit" name="" value="${_('Submit')}" class="input button right"> 
+  <input type="hidden" name="mode" value="${c.mode}">
+  <input type="hidden" name="poll_id" value="${c.poll.id}">
+  % if c.mode is 'edit':
+  <input type="hidden" name="question_id" value="${c.question.id}">
+  % endif
+
+  <div class="control-group">
+    <div class="controls">
+      <button type="submit" class="btn">${_('Submit')}</button>
+    </div>
+  </div>
 </form>
 
 % if c.mode is 'edit':
 <a href="${url(controller='poll', action='addAnswer', poll_id=c.poll.id, question_id=c.question.id)}">Add answer</a>
 
-<table>
-  % for a in c.question.answers:
-  <tr>
-    <td>
-      ${_('Answer')}
-    </td>
-    <td>
-      ${a.name}
-    </td>
-    <td>
-      <a href="${url(controller='poll', action='editAnswer', poll_id=c.poll.id, answer_id=a.id)}">edit</a>
-      <a href="${url(controller='poll', action='deleteAnswer', poll_id=c.poll.id, question_id=a.question_id, answer_id=a.id)}">delete</a>
-    </td>
-  </tr>
-  % endfor
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>${_('Answer')}</th>
+      <th>${_('Options')}</th>
+    </tr>
+  </thead>
+  <tbody>
+    % for a in c.question.answers:
+    <tr>
+      <td>
+        ${a.name}
+      </td>
+      <td>
+        <a href="${url(controller='poll', action='editAnswer', poll_id=c.poll.id, answer_id=a.id)}">edit</a>
+        <a href="${url(controller='poll', action='deleteAnswer', poll_id=c.poll.id, question_id=a.question_id, answer_id=a.id)}">delete</a>
+      </td>
+    </tr>
+    % endfor
+  </tbody>
 </table>
-
 % endif
 
-</article>
 <div id="make-space" class="prepend-top">&nbsp;</div>
-</div>
 
 <%
 if 'reqparams' in session:

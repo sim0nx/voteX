@@ -14,16 +14,14 @@ def getFormVar(s, c, var):
 	return ''
 %>
 
+<h3>${c.heading}</h3>
 
 <form method="post" action="${url(controller='vote', action='doVote')}" name="recordform">
 
-<div id="content" class="span-18 push-1 last ">
-<header style="background:#00ADEF; padding:5px; font-weight:bold; color:#fff;">${_('Cast your vote')}</header>
-<article>
-<table class="table_content">
+<table class="table">
 	${parent.all_messages()}
   <tr>
-    <td class="table_title">
+    <td>
       ${_('Name')}
     </td>
 		<td>
@@ -31,7 +29,7 @@ def getFormVar(s, c, var):
 		</td>
 	</tr>
 	<tr>
-    <td class="table_title">
+    <td>
       ${_('Instructions')}
     </td>
 		<td>
@@ -43,36 +41,43 @@ def getFormVar(s, c, var):
 </table>
 
 % for q in c.poll.questions:
-<table class="table_content">
-	<tr>
-    <td class="table_title">
-      ${q.question}
-    </td>
-    <td>&nbsp;</td>
-  </tr>
-  <tr>
-  % for a in q.answers:
-		<td>
-      % if q.type == 1:
-      <textarea rows='10' cols='60' name="question_t_${q.id}_${a.id}"></textarea>
-      % elif q.type == 2:
-  		<input type="radio" name="question_r_${q.id}_${a.id}" value="${a.id}">${a.name}<br/>
-      % elif q.type == 3:
-			<input type="checkbox" name="question_c_${q.id}_${a.id}" value="${a.id}">${a.name}<br/>
-      % endif
-		</td>
-  % endfor
-  </tr>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>
+        ${q.question}
+      </th>
+      <th>&nbsp;</th>
+    </tr>
+  </thead>
+  <tbody>
+    % for a in q.answers:
+    <tr>
+      <td>
+        % if q.type == 1:
+        <textarea rows='10' cols='60' name="question_t_${q.id}_${a.id}"></textarea>
+        % elif q.type == 2:
+        <input type="radio" name="question_r_${q.id}" value="${a.id}">${a.name}<br/>
+        % elif q.type == 3:
+        <input type="checkbox" name="question_c_${q.id}_${a.id}" value="${a.id}">${a.name}<br/>
+        % endif
+      </td>
+    </tr>
+    % endfor
+  </tbody>
 </table>
 % endfor
 
-<input type="hidden" name="vote_key" value="${c.vote_key}">
-<input type="submit" name="" value="${_('Submit')}" class="input button right"> 
+  <input type="hidden" name="vote_key" value="${c.vote_key}">
 
+  <div class="control-group">
+    <div class="controls">
+      <button type="submit" class="btn">${_('Submit')}</button>
+    </div>
+  </div>
 </form>
-</article>
+
 <div id="make-space" class="prepend-top">&nbsp;</div>
-</div>
 
 <%
 if 'reqparams' in session:

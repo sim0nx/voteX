@@ -13,38 +13,33 @@ def getFormVar(s, c, var):
   return ''
 %>
 
-<form method="post" action="${url(controller='poll', action='doEditAnswer')}" name="recordform">
-
-<div id="content" class="span-18 push-1 last ">
-<header style="background:#00ADEF; padding:5px; font-weight:bold; color:#fff;">${_('Add answer')}</header>
-<article>
+<h3>${c.heading}</h3>
+${parent.flash()}
 <a href="${url(controller='poll', action='editQuestion', poll_id=c.poll.id, question_id=c.question.id)}">Back to question</a>
 
-<table class="table_content">
-  ${parent.all_messages()}
-  <tr>
-    <td class="table_title">
-      ${_('Answer')}
-   </td>
-    <td>
+<form method="post" action="${url(controller='poll', action='doEditAnswer')}" name="recordform" class="form-horizontal">
+  <div class="control-group">
+    <label class="control-label">${_('Answer')}</label>
+    <div class="controls">
       <textarea rows='10' cols='60' name="answer">${getFormVar(session, c, 'name')}</textarea>
-    </td>
-  </tr>
-</table>
+    </div>
+  </div>
 
-<input type="hidden" name="mode" value="${c.mode}">
-<input type="hidden" name="poll_id" value="${c.poll.id}">
-<input type="hidden" name="question_id" value="${c.question.id}">
-% if c.mode is 'edit':
-<input type="hidden" name="answer_id" value="${c.answer.id}">
-% endif
-<input type="submit" name="" value="${_('Submit')}" class="input button right"> 
+  <input type="hidden" name="mode" value="${c.mode}">
+  <input type="hidden" name="poll_id" value="${c.poll.id}">
+  <input type="hidden" name="question_id" value="${c.question.id}">
+  % if c.mode is 'edit':
+  <input type="hidden" name="answer_id" value="${c.answer.id}">
+  % endif
+
+  <div class="control-group">
+    <div class="controls">
+      <button type="submit" class="btn">${_('Submit')}</button>
+    </div>
+  </div>
 </form>
 
-
-</article>
 <div id="make-space" class="prepend-top">&nbsp;</div>
-</div>
 
 <%
 if 'reqparams' in session:
