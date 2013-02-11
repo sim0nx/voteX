@@ -62,6 +62,7 @@ class VoteController(BaseController):
       try:
         participant = Session.query(Participant).filter(Participant.key == request.params['vote_key']).one()
         poll = Session.query(Poll).filter(Poll.id == participant.poll_id).one()
+        c.heading = 'Cast your vote'
 
         if datetime.now() > poll.expiration_date:
           flash('error', _('Sorry, poll has expired'))
@@ -92,7 +93,7 @@ class VoteController(BaseController):
       flash('error', _('Sorry, poll has expired'))
       redirect(url(controller='vote', action='vote'))
 
-    for k in request.params:
+    for k, v in request.params.items():
       if 'question' in k:
         m = re.match(r'question_(t|r|c)_(\d+)(?:_(\d+))?', k)
         if m and len(m.groups()) == 3:
@@ -111,7 +112,7 @@ class VoteController(BaseController):
             Session.add(s)
           elif m.group(1) == 'r':
             q = Session.query(Question).filter(and_(Question.id == m.group(2), Question.poll_id == poll.id)).one()
-            a = Session.query(Answer).filter(and_(Answer.id == m.group(3), Answer.question_id == q.id)).one()
+            a = Session.query(Answer).filter(and_(Answer.id == v, Answer.question_id == q.id)).one()
 
             s = Submission()
             s.poll_id = poll.id
@@ -155,6 +156,7 @@ class VoteController(BaseController):
       #redirect(url(controller='vote', action='vote'))
 
     c.poll = poll
+    c.heading = _('Poll results')
     submissions = {}
 
     for q in poll.questions:

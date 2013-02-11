@@ -77,6 +77,7 @@ class Participant(Base):
   participant = Column(String(255))
   key = Column(String(64))
   update_date = Column(DateTime)
+  mail_sent = Column(Boolean)
 
   submissions = relationship('Submission')
 

@@ -85,6 +85,7 @@ class PollController(BaseController):
 
   @require_login
   def addPoll(self):
+    c.heading = _('Add poll')
     c.mode = 'add'
     return render('/poll/edit.mako')
 
@@ -221,6 +222,9 @@ class PollController(BaseController):
     s.quit()
     '''
 
+    # this doesn't cut it...
+    p.mail_sent = True
+
     Session.add(p)
     Session.flush()
 
@@ -316,25 +320,26 @@ class PollController(BaseController):
 
     poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params['poll_id']).one()
     c.poll = poll
-    votes = {}
-    votes['missing'] = 0
+    c.heading = _('Poll results')
+    submissions = {}
 
-    if poll.type == 'yesno' or poll.type == 'yesnonull':
-      for v in poll.votes:
-        if v.simple_vote is None:
-          votes['missing'] += 1
-        elif not v.simple_vote in votes:
-          votes[v.simple_vote] = 1
-        else:
-          votes[v.simple_vote] += 1
-    else:
-      for v in poll.votes:
-        if v.complex_vote is None:
-          votes['missing'] += 1
-        else:
-          votes[v.complex_vote] = 1
+    for q in poll.questions:
+      if not q.type == 1:
+        for a in q.answers:
+          i = Session.query(Submission).filter(Submission.answer_id == a.id).count()
+          submissions[a.id] = i
+      else:
+        for a in q.answers:
+          all_a = Session.query(Submission).filter(Submission.answer_id == a.id).all()
+          for s_a in all_a:
+            if a.id in submissions:
+              submissions[a.id].append(s_a.answer_text)
+            else:
+              submissions[a.id] = []
+              submissions[a.id].append(s_a.answer_text)
 
-    c.votes = votes      
+    c.submissions = submissions
+
     return render('/vote/showResults.mako')
 
   @require('Login', 'PollID', 'RunningPoll')
