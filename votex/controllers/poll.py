@@ -33,6 +33,7 @@ log = logging.getLogger(__name__)
 
 from votex.lib.helpers import *
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy import and_
 import re
 
 import smtplib
@@ -71,6 +72,7 @@ class PollController(BaseController):
   @require_login
   def showAll(self):
     c.heading = _('All polls')
+    c.datetimenow = datetime.now()
     c.polls = []
 
     polls = Session.query(Poll).filter(Poll.owner == self.uid).all()
@@ -82,6 +84,21 @@ class PollController(BaseController):
       c.polls.append(s)
 
     return render('/poll/showAll.mako')
+
+  def showPublicPolls(self):
+    c.heading = _('Public polls')
+    c.datetimenow = datetime.now()
+    c.polls = []
+
+    polls = Session.query(Poll).filter(and_(Poll.running == True, Poll.public == True, Poll.expiration_date < c.datetimenow)).limit(10).all()
+    for s in polls:
+      try:
+        s.name = s.name.encode('ascii','ignore')
+      except:
+        s.name ='poo...frickin P000000'
+      c.polls.append(s)
+
+    return render('/poll/showAllPublic.mako')
 
   @require_login
   def addPoll(self):
@@ -194,7 +211,7 @@ class PollController(BaseController):
     flash('success', _('Poll successfully edited'))
     redirect(url(controller='poll', action='showAll'))
 
-  def _sendMail(self, email, poll):
+  def _sendMail(self, participant, poll):
     mailtext = '''\
         Hey,
 
@@ -207,14 +224,10 @@ class PollController(BaseController):
         The poll expires on %s
         '''
 
-    p = Participant()
-    p.poll_id = poll.id
-    p.key = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(20))
-
-    msg = MIMEText(mailtext % (poll.name, p.key, p.key, poll.expiration_date), 'plain')
+    msg = MIMEText(mailtext % (poll.name, participant.key, participant.key, poll.expiration_date), 'plain')
     msg['Subject'] = 'syn2cat - We need you to vote'
     msg['From'] = 'noreply@hackerspace.lu'
-    msg['To'] = email
+    msg['To'] = participant.participant
 
     '''
     s = smtplib.SMTP('localhost')
@@ -222,12 +235,16 @@ class PollController(BaseController):
     s.quit()
     '''
 
-    # this doesn't cut it...
-    p.mail_sent = True
+    from subprocess import Popen, PIPE
+    executable = '/usr/sbin/sendmail'
+    proc = Popen('%s -t -i' % (executable,), shell=True, stdin=PIPE)
+    proc.communicate(bytes(msg.as_string()))
+    proc.stdin.close()
+    if proc.wait() != 0:
+      raise Exception("Status code %d." % (proc.returncode, ))
 
-    Session.add(p)
-    Session.flush()
-
+  def _getRandomKey(self, length=20):
+    return ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(length))
   
   @require('POST', 'Login', 'PollID', 'ParticipantParams')
   def doEditParticipant(self):
@@ -245,8 +262,9 @@ class PollController(BaseController):
       p = Participant()
       p.poll_id = poll.id
       p.participant = v
-      p.key = ''
-      p.update_date = datetime.now()
+      p.key = self._getRandomKey()
+      p.update_date = None
+      p.mail_sent = False
       Session.add(p)
 
     Session.commit()
@@ -342,6 +360,34 @@ class PollController(BaseController):
 
     return render('/vote/showResults.mako')
 
+  def showPublicResults(self):
+    if (not 'poll_id' in request.params):
+      redirect(url(controller='poll', action='showPublicPolls'))
+
+    poll = Session.query(Poll).filter(and_(Poll.running == True, Poll.public == True, Poll.expiration_date < datetime.now(), Poll.id == request.params.get('poll_id'))).one()
+    c.poll = poll
+    c.heading = _('Poll results')
+    submissions = {}
+
+    for q in poll.questions:
+      if not q.type == 1:
+        for a in q.answers:
+          i = Session.query(Submission).filter(Submission.answer_id == a.id).count()
+          submissions[a.id] = i
+      else:
+        for a in q.answers:
+          all_a = Session.query(Submission).filter(Submission.answer_id == a.id).all()
+          for s_a in all_a:
+            if a.id in submissions:
+              submissions[a.id].append(s_a.answer_text)
+            else:
+              submissions[a.id] = []
+              submissions[a.id].append(s_a.answer_text)
+
+    c.submissions = submissions
+
+    return render('/vote/showResults.mako')
+
   @require('Login', 'PollID', 'RunningPoll')
   def deletePoll(self):
     poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params.get('poll_id')).one()
@@ -358,6 +404,56 @@ class PollController(BaseController):
 
     flash('success', _('Poll successfully deleted'))
     redirect(url(controller='poll', action='showAll'))
+
+  @require('Login', 'PollID')
+  def doActivatePoll(self):
+    poll = Session.query(Poll).filter(Poll.owner == self.uid).filter(Poll.id == request.params.get('poll_id')).one()
+    poll.running = True
+    Session.flush()
+    res = self._pollSendMails(poll)
+    Session.commit()
+
+    status = 'success'
+    extra_msg = ''
+    if res['failed'] > 0:
+      status = 'warning'
+      extra_msg = _('(mails sent {1}/{0})'.format(res['all'], (res['all'] - res['failed'])))
+
+    flash(status, _('Poll successfully activated') + ' ' + extra_msg)
+    redirect(url(controller='poll', action='showAll'))
+
+  @require('Login', 'PollID', 'RunningPoll')
+  def doResendMails(self):
+    poll = Session.query(Poll).filter(and_(Poll.owner == self.uid, Poll.id == request.params.get('poll_id'))).one()
+    res = self._pollSendMails(poll)
+    Session.commit()
+
+    status = 'success'
+    if res['failed'] > 0:
+      status = 'warning'
+
+    flash(status, _('Mails sent {1}/{0}'.format(res['all'], (res['all'] - res['failed']))))
+    redirect(url(controller='poll', action='showAll'))
+
+  def _pollSendMails(self, poll):
+    m_all = 0
+    m_failed = 0
+
+    for p in poll.participants:
+      m_all += 1
+
+      if not p.mail_sent:
+        try:
+          self._sendMail(p, poll)
+          p.mail_sent = True
+        except Exception as e:
+          p.mail_sent = False
+          m_failed += 1
+          log.debug(str(e))
+
+    Session.flush()
+
+    return {'all' : m_all, 'failed' : m_failed}
 
   @require('Login', 'QuestionID', 'PollID', 'RunningPoll')
   def deleteQuestion(self):
@@ -422,8 +518,10 @@ class PollController(BaseController):
       # see BaseController.onError for default behavior
       raise Exception(_('Poll does not exist')) 
 
-    if poll.running > 0 and not config['debug']:
-      raise Exception(_('Connot edit a running poll'))
+    if poll.running:
+      log.debug('Editing a running poll')
+      if not config['debug']:
+        raise Exception(_('Connot edit a running poll'))
 
   def _validatePollParams(self):
     # @TODO request.params may contain multiple values per key... test & fix

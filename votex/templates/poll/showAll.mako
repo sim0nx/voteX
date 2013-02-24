@@ -16,23 +16,34 @@
   <% i = 0 %>
   % for s in c.polls:
   <%
-    public = h.literal('<img src="/images/icons/notok.png">') if not s.public  else h.literal('<img src="/images/icons/ok.png">')
+    public = '' if not s.public else h.literal('<i class="icon-ok"></i>')
     i += 1
+
+    status = ''
+    if s.running and s.expiration_date > c.datetimenow:
+      status = 'success'
+    elif not s.running and s.expiration_date > c.datetimenow:
+      status = 'warning'
+    elif not s.running and s.expiration_date < c.datetimenow:
+      status = 'error'
   %>
-    <tr class="table_row"> 
+    <tr class="table_row ${status}">
       <td>${i}</td>
       <td>${s.name}</td>
       <td>${s.expiration_date}</td>
       <td>${public}</td>
       <td>
         <a href="${url(controller='poll', action='editPoll', poll_id=s.id)}" alt="${_('edit poll')}">
-          <img src="/images/icons/pencil.png">
+          <i class="icon-wrench"></i>
         </a>
-        <a href="${url(controller='poll', action='deletePoll', poll_id=s.id)}" onclick="return confirm('${_('Are you sure you want to delete this poll ?')}')" alt="${_('delete poll')}">
-          <img src="/images/icons/notok.png">
+        <a href="${url(controller='poll', action='deletePoll', poll_id=s.id)}" data-confirm="${_('Are you sure you want to delete this poll ?')}">
+          <i class="icon-remove"></i>
         </a>
         <a href="${url(controller='poll', action='showResults', poll_id=s.id)}">
-          <img src="/images/icons/pencil.png" alt="${_('Show results')}">
+          <i class="icon-align-left"></i>
+        </a>
+        <a href="${url(controller='poll', action='doResendMails', poll_id=s.id)}" data-confirm="${_('Are you sure you want to continue ?')}">
+          <i class="icon-envelope"></i>
         </a>
       </td>
     </tr>

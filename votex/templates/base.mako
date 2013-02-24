@@ -3,10 +3,11 @@
 <html lang="en-US">
 <head>
 	<meta charset="UTF-8">
-	<!-- Stylesheets !-->
   <link href="/css/bootstrap.min.css" rel="stylesheet" media="screen" type="text/css"/>
   <link href="/css/mematool_bootstrap_custom.css" rel="stylesheet" media="screen" type="text/css"/>
-	<!-- Website title !-->
+  <script type="text/javascript" src="/javascript/jquery.min.js"></script>
+  <script type="text/javascript" src="/javascript/bootstrap.min.js"></script>
+  <script type="text/javascript" src="/javascript/votex.js"></script>
 	<title>VoteX</title>
 </head>
 <body>
@@ -17,7 +18,7 @@
       <div class="span10">
         <!-- Title -->
         <div class="page-header">
-          <h1><img src="/images/logo.png" width="" height="" alt="mematool logo" /></h1>
+          <h1><img src="/img/logo.png" width="" height="" alt="mematool logo" /></h1>
 
           <!-- NavBar -->
           <div class="navbar navbar-inverse">
@@ -34,6 +35,7 @@
                       <li>${h.link_to(_('Poll'),url(controller='poll', action='login'))}</li>
                       <li>${h.link_to(_('Vote'),url(controller='vote', action='index'))}</li>
                       <li>${h.link_to(_('Results'),url(controller='vote', action='results'))}</li>
+                      <li>${h.link_to(_('Public polls'),url(controller='poll', action='showPublicPolls'))}</li>
                       % if session.has_key('uid'):
                       <li>${h.link_to(_('Logout'),url(controller='poll', action='logout',id=None))}</li>
                       % endif
@@ -88,13 +90,6 @@
   </div>
 </div>
   <!-- footer !-->
-</body>
-</html>
-
-  <script type="text/javascript" src="/javascript/jquery.js"></script>
-  <script type="text/javascript" src="/javascript/ui.jquery.js"></script>
-  <script type="text/javascript" src="/javascript/mematool.js"></script>
-  <script type="text/javascript" src="/javascript/jquery.qtip.js"></script>
 </body>
 </html>
 

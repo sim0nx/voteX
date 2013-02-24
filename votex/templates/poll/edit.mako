@@ -26,6 +26,18 @@ if c.mode == 'edit':
 
 <h3>${c.heading}</h3>
 
+% if c.mode is 'edit':
+<form method="post" action="${url(controller='poll', action='doActivatePoll')}" class="form-horizontal">
+  <input type="hidden" name="poll_id" value="${c.poll.id}">
+  <div class="control-group">
+    <label class="control-label">${_('Activate Poll')}</label>
+    <div class="controls">
+      <button type="submit" class="btn btn-success">${_('Submit')}</button>
+    </div>
+  </div>
+</form>
+% endif
+
 <form method="post" action="${url(controller='poll', action='doEditPoll')}" name="recordform" class="form-horizontal">
   <div class="control-group">
     <label class="control-label">${_('Name')}</label>

@@ -59,9 +59,18 @@ class VoteController(BaseController):
 
   def vote(self):
     if not request.params.get('vote_key', '') == '':
+      check = False
+
       try:
         participant = Session.query(Participant).filter(Participant.key == request.params['vote_key']).one()
         poll = Session.query(Poll).filter(Poll.id == participant.poll_id).one()
+        check = True
+      except Exception as e:
+        import sys, traceback
+        traceback.print_exc(file=sys.stdout)
+        pass
+
+      if check:
         c.heading = 'Cast your vote'
 
         if datetime.now() > poll.expiration_date:
@@ -73,10 +82,9 @@ class VoteController(BaseController):
           c.vote_key = request.params['vote_key']
 
           return render('/vote/dovote.mako')
-      except Exception as e:
-        import sys, traceback
-        traceback.print_exc(file=sys.stdout)
-        pass
+        else:
+          flash('error', _('You have already voted'))
+
 
     return render('/vote/vote.mako')
 
